@@ -17,7 +17,7 @@ Yep! That's it. Don't forget to add the semicolon (`;`) character at the end.
 One can also store values inside variables:
 ```
 let name = "Ella";
-println("Hello " + name "!");
+println("Hello " + name + "!");
 ```
 This should print `Hello Ella!` to the console.
 
