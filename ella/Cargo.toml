@@ -13,3 +13,10 @@ ella-source = {path = "../ella-source"}
 ella-value = {path = "../ella-value"}
 ella-vm = {path = "../ella-vm"}
 logos = "0.11.4"
+
+[dev-dependencies]
+criterion = "0.3.3"
+
+[[bench]]
+harness = false
+name = "interpret"

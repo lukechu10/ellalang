@@ -225,16 +225,18 @@ impl<'a> Vm<'a> {
                 }
                 OpCode::LdUpVal => {
                     let index = read_u8!();
-                    let upvalue =
-                        self.call_stack.last().unwrap().closure.upvalues.borrow()[index as usize].clone();
+                    let upvalue = self.call_stack.last().unwrap().closure.upvalues.borrow()
+                        [index as usize]
+                        .clone();
                     let value = self.resolve_upvalue_into_value(&upvalue.borrow());
                     self.stack.push(value);
                 }
                 OpCode::StUpVal => {
                     let index = read_u8!();
                     let value = self.stack.last().unwrap().clone();
-                    let upvalue =
-                        self.call_stack.last().unwrap().closure.upvalues.borrow()[index as usize].clone();
+                    let upvalue = self.call_stack.last().unwrap().closure.upvalues.borrow()
+                        [index as usize]
+                        .clone();
                     self.set_upvalue(upvalue, value);
                 }
                 OpCode::CloseUpVal => {
