@@ -225,7 +225,11 @@ impl<'a> Visitor<'a> for Codegen<'a> {
             }
             Expr::Binary { lhs, op, rhs } => {
                 match op {
-                    Token::Equals | Token::PlusEquals => {
+                    Token::Equals
+                    | Token::PlusEquals
+                    | Token::MinusEquals
+                    | Token::AsteriskEquals
+                    | Token::SlashEquals => {
                         self.visit_expr(rhs); // do not codegen lhs
                     }
                     _ => {
