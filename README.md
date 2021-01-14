@@ -36,7 +36,7 @@ let computed = 10 / 5;
 or
 ```
 let x = 10;
-let y = x / 2; // should evaluate to 2
+let y = x / 5; // should evaluate to 2
 ```
 
 ### Functions
