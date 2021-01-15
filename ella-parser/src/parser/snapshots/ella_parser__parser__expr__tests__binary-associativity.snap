@@ -2,18 +2,33 @@
 source: ella-parser/src/parser/expr.rs
 expression: "expr(\"2 * 2 * 2\")"
 ---
-Binary {
-    lhs: Binary {
-        lhs: NumberLit(
-            2.0,
-        ),
+Expr {
+    kind: Binary {
+        lhs: Expr {
+            kind: Binary {
+                lhs: Expr {
+                    kind: NumberLit(
+                        2.0,
+                    ),
+                    span: 0..1,
+                },
+                op: Asterisk,
+                rhs: Expr {
+                    kind: NumberLit(
+                        2.0,
+                    ),
+                    span: 4..5,
+                },
+            },
+            span: 0..5,
+        },
         op: Asterisk,
-        rhs: NumberLit(
-            2.0,
-        ),
+        rhs: Expr {
+            kind: NumberLit(
+                2.0,
+            ),
+            span: 8..9,
+        },
     },
-    op: Asterisk,
-    rhs: NumberLit(
-        2.0,
-    ),
+    span: 0..9,
 }

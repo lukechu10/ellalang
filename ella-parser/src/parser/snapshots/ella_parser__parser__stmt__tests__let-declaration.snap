@@ -4,7 +4,10 @@ expression: "stmt(\"let x = 2;\")"
 ---
 LetDeclaration {
     ident: "x",
-    initializer: NumberLit(
-        2.0,
-    ),
+    initializer: Expr {
+        kind: NumberLit(
+            2.0,
+        ),
+        span: 8..9,
+    },
 }

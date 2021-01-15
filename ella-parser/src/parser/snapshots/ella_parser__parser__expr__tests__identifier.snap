@@ -2,6 +2,9 @@
 source: ella-parser/src/parser/expr.rs
 expression: "expr(\"foo\")"
 ---
-Identifier(
-    "foo",
-)
+Expr {
+    kind: Identifier(
+        "foo",
+    ),
+    span: 0..3,
+}

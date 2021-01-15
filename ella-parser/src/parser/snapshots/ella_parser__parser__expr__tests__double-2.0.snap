@@ -2,6 +2,9 @@
 source: ella-parser/src/parser/expr.rs
 expression: "expr(\"2.0\")"
 ---
-NumberLit(
-    2.0,
-)
+Expr {
+    kind: NumberLit(
+        2.0,
+    ),
+    span: 0..3,
+}

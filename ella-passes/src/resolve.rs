@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::ops::Range;
 use std::rc::Rc;
 
-use ella_parser::ast::{Expr, Stmt};
+use ella_parser::ast::{Expr, ExprKind, Stmt};
 use ella_parser::visitor::{walk_expr, Visitor};
 use ella_source::{Source, SyntaxError};
 use ella_value::BuiltinVars;
@@ -253,8 +253,8 @@ impl<'a> Visitor<'a> for Resolver<'a> {
     fn visit_expr(&mut self, expr: &'a Expr) {
         walk_expr(self, expr);
 
-        match expr {
-            Expr::Identifier(ident) => {
+        match &expr.kind {
+            ExprKind::Identifier(ident) => {
                 let symbol = self.resolve_symbol(ident, 0..0);
                 if let Some((offset, symbol)) = symbol {
                     self.resolved_symbol_table.insert(
@@ -271,7 +271,7 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                     );
                 }
             }
-            Expr::FnCall { callee, args } => {
+            ExprKind::FnCall { callee, args } => {
                 self.visit_expr(callee);
                 for expr in args {
                     self.visit_expr(expr);

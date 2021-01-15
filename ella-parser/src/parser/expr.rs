@@ -1,3 +1,5 @@
+use crate::ast::ExprKind;
+
 use super::*;
 
 impl<'a> Parser<'a> {
@@ -15,25 +17,30 @@ impl<'a> Parser<'a> {
             Token::NumberLit(_) | Token::BoolLit(_) | Token::StringLit(_) => {
                 self.parse_literal_expr()
             }
-            Token::Identifier(_) => self.parse_identifier_or_call_expr(),
+            Token::Identifier(_) => self.parse_identifier_expr(),
             Token::LogicalNot => {
+                let lo = self.node_start();
                 self.next();
-                Expr::Unary {
+                ExprKind::Unary {
                     op: Token::LogicalNot,
                     arg: Box::new(self.parse_expr()),
                 }
+                .with_span(lo..self.node_end())
             }
             Token::Minus => {
+                let lo = self.node_start();
                 self.next();
-                Expr::Unary {
+                ExprKind::Unary {
                     op: Token::Minus,
                     arg: Box::new(self.parse_expr()),
                 }
+                .with_span(lo..self.node_end())
             }
             _ => {
+                let lo = self.node_start();
                 self.next();
                 self.unexpected();
-                Expr::Error
+                ExprKind::Error.with_span(lo..self.node_end())
             }
         }
     }
@@ -71,10 +78,11 @@ impl<'a> Parser<'a> {
                             }
                         }
 
-                        lhs = Expr::FnCall {
+                        let lo = lhs.span.start;
+                        lhs = ExprKind::FnCall {
                             callee: Box::new(lhs),
                             args,
-                        }
+                        }.with_span(lo..self.node_end());
                     }
                     _ => unreachable!(),
                 }
@@ -97,11 +105,13 @@ impl<'a> Parser<'a> {
 
             let rhs = self.parse_expr_bp(r_bp);
 
-            lhs = Expr::Binary {
+            let lo = lhs.span.start;
+            let hi = rhs.span.end;
+            lhs = ExprKind::Binary {
                 lhs: Box::new(lhs),
                 op: binop,
                 rhs: Box::new(rhs),
-            }
+            }.with_span(lo..hi)
         }
 
         lhs
@@ -111,24 +121,29 @@ impl<'a> Parser<'a> {
     /// Parses a literal expression.
     /// A literal can be either a number literal or a bool literal.
     fn parse_literal_expr(&mut self) -> Expr {
+        let lo = self.node_start();
+
         let val = match self.current_token {
-            Token::NumberLit(val) => Expr::NumberLit(val),
-            Token::BoolLit(val) => Expr::BoolLit(val),
-            Token::StringLit(ref val) => Expr::StringLit(val.clone()),
+            Token::NumberLit(val) => ExprKind::NumberLit(val),
+            Token::BoolLit(val) => ExprKind::BoolLit(val),
+            Token::StringLit(ref val) => ExprKind::StringLit(val.clone()),
             _ => {
                 self.unexpected();
-                Expr::Error
+                ExprKind::Error
             }
         };
-        if val != Expr::Error {
+        if val != ExprKind::Error {
             self.next(); // eat parsed token if not error
         }
-        val
+
+        val.with_span(lo..self.node_end())
     }
 
     /* Expressions.Identifier */
     /// Parses an identifier or a call expression.
-    fn parse_identifier_or_call_expr(&mut self) -> Expr {
+    fn parse_identifier_expr(&mut self) -> Expr {
+        let lo = self.node_start();
+
         let ident = match self.current_token.clone() {
             Token::Identifier(ident) => {
                 self.next();
@@ -137,10 +152,11 @@ impl<'a> Parser<'a> {
             _ => {
                 self.next();
                 self.unexpected();
-                return Expr::Error;
+                return ExprKind::Error.with_span(lo..self.node_end());
             }
         };
-        Expr::Identifier(ident)
+
+        ExprKind::Identifier(ident).with_span(lo..self.node_end())
     }
 }
 
