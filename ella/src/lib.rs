@@ -9,6 +9,8 @@ pub fn interpret(source: &str) {
     use ella_vm::codegen::Codegen;
     use ella_vm::vm::{InterpretResult, Vm};
 
+    let source = source.into();
+
     let builtin_vars = default_builtin_vars();
 
     let dummy_source = "".into();
@@ -18,11 +20,10 @@ pub fn interpret(source: &str) {
     let accessible_symbols = resolver.accessible_symbols();
 
     let mut vm = Vm::new(&builtin_vars);
-    let mut codegen = Codegen::new("<global>".to_string(), resolve_result);
+    let mut codegen = Codegen::new("<global>".to_string(), resolve_result, &source);
     codegen.codegen_builtin_vars(&builtin_vars);
     vm.interpret(codegen.into_inner_chunk()); // load built in functions into memory
 
-    let source = source.into();
     let mut parser = Parser::new(&source);
     let ast = parser.parse_program();
 
@@ -34,7 +35,7 @@ pub fn interpret(source: &str) {
     eprintln!("{}", source.errors);
     assert!(source.has_no_errors());
 
-    let mut codegen = Codegen::new("<global>".to_string(), resolve_result);
+    let mut codegen = Codegen::new("<global>".to_string(), resolve_result, &source);
 
     codegen.codegen_function(&ast);
 
