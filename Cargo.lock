@@ -292,6 +292,7 @@ dependencies = [
  "criterion",
  "ella-parser",
  "ella-passes",
+ "ella-source",
  "ella-value",
  "num-traits",
 ]

@@ -21,7 +21,7 @@ fn repl() {
     let mut accessible_symbols = resolver.accessible_symbols().clone();
 
     let mut vm = Vm::new(&builtin_vars);
-    let mut codegen = Codegen::new("<global>".to_string(), resolve_result);
+    let mut codegen = Codegen::new("<global>".to_string(), resolve_result, &dummy_source);
     codegen.codegen_builtin_vars(&builtin_vars);
     vm.interpret(codegen.into_inner_chunk()); // load built in functions into memory
 
@@ -43,7 +43,7 @@ fn repl() {
 
         eprintln!("{}", source.errors);
         if source.has_no_errors() {
-            let mut codegen = Codegen::new("<global>".to_string(), resolve_result);
+            let mut codegen = Codegen::new("<global>".to_string(), resolve_result, &source);
 
             codegen.codegen_function(&ast);
 
@@ -76,7 +76,7 @@ fn interpret_file_contents(source: &str) {
     let accessible_symbols = resolver.accessible_symbols();
 
     let mut vm = Vm::new(&builtin_vars);
-    let mut codegen = Codegen::new("<global>".to_string(), resolve_result);
+    let mut codegen = Codegen::new("<global>".to_string(), resolve_result, &dummy_source);
     codegen.codegen_builtin_vars(&builtin_vars);
     vm.interpret(codegen.into_inner_chunk()); // load built in functions into memory
 
@@ -92,7 +92,7 @@ fn interpret_file_contents(source: &str) {
     if !source.has_no_errors() {
         eprintln!("{}", source.errors);
     } else {
-        let mut codegen = Codegen::new("<global>".to_string(), resolve_result);
+        let mut codegen = Codegen::new("<global>".to_string(), resolve_result, &source);
 
         codegen.codegen_function(&ast);
 
