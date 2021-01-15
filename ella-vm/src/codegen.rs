@@ -1,5 +1,6 @@
 //! Lowers AST into a `Chunk` (bytecode).
 
+use ella_parser::ast::ExprKind;
 use ella_parser::{
     ast::{Expr, Stmt},
     lexer::Token,
@@ -165,8 +166,8 @@ impl<'a> Visitor<'a> for Codegen<'a> {
             }};
         }
 
-        match expr {
-            Expr::NumberLit(val) => {
+        match &expr.kind {
+            ExprKind::NumberLit(val) => {
                 if *val == 0.0 {
                     self.chunk.write_chunk(OpCode::Ld0, 0);
                 } else if *val == 1.0 {
@@ -175,13 +176,13 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     self.chunk.emit_ldf64(*val, 0);
                 }
             }
-            Expr::BoolLit(val) => {
+            ExprKind::BoolLit(val) => {
                 match val {
                     true => self.chunk.write_chunk(OpCode::LdTrue, 0),
                     false => self.chunk.write_chunk(OpCode::LdFalse, 0),
                 };
             }
-            Expr::StringLit(val) => {
+            ExprKind::StringLit(val) => {
                 let obj = if let Some(obj) = self.constant_strings.get(val) {
                     // reuse same String
                     obj.clone()
@@ -194,7 +195,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 self.chunk.write_chunk(OpCode::Ldc, 0);
                 self.chunk.write_chunk(constant, 0);
             }
-            Expr::Identifier(ident) => {
+            ExprKind::Identifier(ident) => {
                 let resolved_symbol = *self.resolve_result.lookup_identifier(expr).unwrap();
 
                 if resolved_symbol.is_global {
@@ -214,7 +215,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     self.chunk.write_chunk(resolved_symbol.offset as u8, 0);
                 }
             }
-            Expr::FnCall { callee, args } => {
+            ExprKind::FnCall { callee, args } => {
                 let arity = args.len() as u8;
                 for arg in args {
                     self.visit_expr(arg);
@@ -223,7 +224,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 self.chunk.write_chunk(OpCode::Calli, 0);
                 self.chunk.write_chunk(arity, 0);
             }
-            Expr::Binary { lhs, op, rhs } => {
+            ExprKind::Binary { lhs, op, rhs } => {
                 match op {
                     Token::Equals | Token::PlusEquals => {
                         self.visit_expr(rhs); // do not codegen lhs
@@ -291,7 +292,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     _ => unreachable!(),
                 };
             }
-            Expr::Unary { op, arg } => {
+            ExprKind::Unary { op, arg } => {
                 self.visit_expr(arg);
                 match op {
                     Token::LogicalNot => self.chunk.write_chunk(OpCode::Not, 0),
@@ -299,7 +300,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     _ => unreachable!(),
                 };
             }
-            Expr::Error => unreachable!(),
+            ExprKind::Error => unreachable!(),
         }
     }
 
@@ -412,7 +413,11 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 self.chunk.write_chunk(OpCode::Pop, 0);
             }
             Stmt::ReturnStmt(expr) => {
-                if let Expr::NumberLit(number) = expr {
+                if let Expr {
+                    kind: ExprKind::NumberLit(number),
+                    ..
+                } = expr
+                {
                     if *number == 0.0 {
                         self.chunk.write_chunk(OpCode::Ret0, 0);
                     } else if *number == 1.0 {

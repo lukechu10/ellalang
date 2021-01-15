@@ -3,7 +3,10 @@ source: ella-parser/src/parser/stmt.rs
 expression: "stmt(\"return 1;\")"
 ---
 ReturnStmt(
-    NumberLit(
-        1.0,
-    ),
+    Expr {
+        kind: NumberLit(
+            1.0,
+        ),
+        span: 7..8,
+    },
 )

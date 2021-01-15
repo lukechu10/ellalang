@@ -2,22 +2,40 @@
 source: ella-parser/src/parser/expr.rs
 expression: "expr(\"foo(1, bar, baz())\")"
 ---
-FnCall {
-    callee: Identifier(
-        "foo",
-    ),
-    args: [
-        NumberLit(
-            1.0,
-        ),
-        Identifier(
-            "bar",
-        ),
-        FnCall {
-            callee: Identifier(
-                "baz",
+Expr {
+    kind: FnCall {
+        callee: Expr {
+            kind: Identifier(
+                "foo",
             ),
-            args: [],
+            span: 0..3,
         },
-    ],
+        args: [
+            Expr {
+                kind: NumberLit(
+                    1.0,
+                ),
+                span: 4..5,
+            },
+            Expr {
+                kind: Identifier(
+                    "bar",
+                ),
+                span: 7..10,
+            },
+            Expr {
+                kind: FnCall {
+                    callee: Expr {
+                        kind: Identifier(
+                            "baz",
+                        ),
+                        span: 12..15,
+                    },
+                    args: [],
+                },
+                span: 12..17,
+            },
+        ],
+    },
+    span: 0..18,
 }

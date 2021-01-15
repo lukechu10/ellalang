@@ -66,7 +66,8 @@ fn op_assign() {
         assert_eq(x += 10, 22);
         assert_eq(x -= 20, 2);
         assert_eq(x *= 2, 4);
-        assert_eq(x /= 4, 1);"#,
+        assert_eq(x /= 4, 1);
+        assert_eq(x, 1);"#,
     );
 }
 

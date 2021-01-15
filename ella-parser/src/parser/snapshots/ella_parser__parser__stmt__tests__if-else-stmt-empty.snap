@@ -3,9 +3,12 @@ source: ella-parser/src/parser/stmt.rs
 expression: "stmt(r#\"if condition {} else {}\"#)"
 ---
 IfElseStmt {
-    condition: Identifier(
-        "condition",
-    ),
+    condition: Expr {
+        kind: Identifier(
+            "condition",
+        ),
+        span: 3..12,
+    },
     if_block: [],
     else_block: Some(
         [],

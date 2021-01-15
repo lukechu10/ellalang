@@ -5,9 +5,12 @@ expression: "stmt(\"{ 1; }\")"
 Block(
     [
         ExprStmt(
-            NumberLit(
-                1.0,
-            ),
+            Expr {
+                kind: NumberLit(
+                    1.0,
+                ),
+                span: 2..3,
+            },
         ),
     ],
 )

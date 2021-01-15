@@ -11,20 +11,35 @@ FnDeclaration {
     ],
     body: [
         ExprStmt(
-            Binary {
-                lhs: Binary {
-                    lhs: Identifier(
-                        "a",
-                    ),
+            Expr {
+                kind: Binary {
+                    lhs: Expr {
+                        kind: Binary {
+                            lhs: Expr {
+                                kind: Identifier(
+                                    "a",
+                                ),
+                                span: 18..19,
+                            },
+                            op: Plus,
+                            rhs: Expr {
+                                kind: Identifier(
+                                    "b",
+                                ),
+                                span: 22..23,
+                            },
+                        },
+                        span: 18..23,
+                    },
                     op: Plus,
-                    rhs: Identifier(
-                        "b",
-                    ),
+                    rhs: Expr {
+                        kind: Identifier(
+                            "c",
+                        ),
+                        span: 26..27,
+                    },
                 },
-                op: Plus,
-                rhs: Identifier(
-                    "c",
-                ),
+                span: 18..27,
             },
         ),
     ],

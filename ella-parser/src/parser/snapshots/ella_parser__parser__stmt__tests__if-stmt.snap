@@ -3,16 +3,25 @@ source: ella-parser/src/parser/stmt.rs
 expression: "stmt(r#\"\n                if condition {\n                    if_block();\n                }\"#)"
 ---
 IfElseStmt {
-    condition: Identifier(
-        "condition",
-    ),
+    condition: Expr {
+        kind: Identifier(
+            "condition",
+        ),
+        span: 20..29,
+    },
     if_block: [
         ExprStmt(
-            FnCall {
-                callee: Identifier(
-                    "if_block",
-                ),
-                args: [],
+            Expr {
+                kind: FnCall {
+                    callee: Expr {
+                        kind: Identifier(
+                            "if_block",
+                        ),
+                        span: 52..60,
+                    },
+                    args: [],
+                },
+                span: 52..62,
             },
         ),
     ],

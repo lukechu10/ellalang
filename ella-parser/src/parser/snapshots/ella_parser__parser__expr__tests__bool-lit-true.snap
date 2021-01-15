@@ -2,6 +2,9 @@
 source: ella-parser/src/parser/expr.rs
 expression: "expr(\"true\")"
 ---
-BoolLit(
-    true,
-)
+Expr {
+    kind: BoolLit(
+        true,
+    ),
+    span: 0..4,
+}

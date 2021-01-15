@@ -1,6 +1,6 @@
 //! Visitor pattern for AST nodes.
 
-use crate::ast::{Expr, Stmt};
+use crate::ast::{Expr, ExprKind, Stmt};
 
 /// Visitor trait for AST walking logic.
 /// Implement this trait by overriding the hooks (`visit_*` methods).
@@ -20,23 +20,23 @@ pub trait Visitor<'ast>: Sized {
 
 /// Walking logic for visiting all child nodes of an [`Expr`].
 pub fn walk_expr<'ast>(visitor: &mut impl Visitor<'ast>, expr: &'ast Expr) {
-    match expr {
-        Expr::NumberLit(_) => {}
-        Expr::BoolLit(_) => {}
-        Expr::StringLit(_) => {}
-        Expr::Identifier(_) => {}
-        Expr::FnCall { callee, args } => {
+    match &expr.kind {
+        ExprKind::NumberLit(_) => {}
+        ExprKind::BoolLit(_) => {}
+        ExprKind::StringLit(_) => {}
+        ExprKind::Identifier(_) => {}
+        ExprKind::FnCall { callee, args } => {
             visitor.visit_expr(callee);
             for arg in args {
                 visitor.visit_expr(arg);
             }
         }
-        Expr::Binary { lhs, op: _, rhs } => {
+        ExprKind::Binary { lhs, op: _, rhs } => {
             visitor.visit_expr(lhs);
             visitor.visit_expr(rhs);
         }
-        Expr::Unary { op: _, arg } => visitor.visit_expr(arg),
-        Expr::Error => {}
+        ExprKind::Unary { op: _, arg } => visitor.visit_expr(arg),
+        ExprKind::Error => {}
     }
 }
 

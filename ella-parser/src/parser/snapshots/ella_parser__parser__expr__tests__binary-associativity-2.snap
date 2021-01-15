@@ -2,18 +2,33 @@
 source: ella-parser/src/parser/expr.rs
 expression: "expr(\"a = b = c\")"
 ---
-Binary {
-    lhs: Identifier(
-        "a",
-    ),
-    op: Equals,
-    rhs: Binary {
-        lhs: Identifier(
-            "b",
-        ),
+Expr {
+    kind: Binary {
+        lhs: Expr {
+            kind: Identifier(
+                "a",
+            ),
+            span: 0..1,
+        },
         op: Equals,
-        rhs: Identifier(
-            "c",
-        ),
+        rhs: Expr {
+            kind: Binary {
+                lhs: Expr {
+                    kind: Identifier(
+                        "b",
+                    ),
+                    span: 4..5,
+                },
+                op: Equals,
+                rhs: Expr {
+                    kind: Identifier(
+                        "c",
+                    ),
+                    span: 8..9,
+                },
+            },
+            span: 4..9,
+        },
     },
+    span: 0..9,
 }

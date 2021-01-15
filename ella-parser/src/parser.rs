@@ -1,10 +1,11 @@
 //! Parse a [`Source`] into an AST (abstract syntax tree).
 
-use crate::ast::{Expr, Stmt};
+use crate::ast::{Expr, ExprKind, Stmt};
 use crate::lexer::Token;
 use ella_source::{Source, SyntaxError};
 use logos::{Lexer, Logos};
 use std::mem;
+use std::ops::Range;
 
 mod expr;
 mod stmt;
@@ -15,6 +16,9 @@ pub use stmt::*;
 pub struct Parser<'a> {
     /// Cached token for peeking.
     current_token: Token,
+    previous_span: Range<usize>,
+    /// Location of the current token.
+    current_span: Range<usize>,
     lexer: Lexer<'a, Token>,
     /// Source code.
     source: &'a Source<'a>,
@@ -26,6 +30,8 @@ impl<'a> Parser<'a> {
         let mut lexer = Token::lexer(source.content);
         Self {
             current_token: lexer.next().unwrap(),
+            previous_span: 0..0,
+            current_span: lexer.span(),
             lexer,
             source,
         }
@@ -62,10 +68,10 @@ impl<'a> Parser<'a> {
         }
 
         if let Some(Stmt::ExprStmt(expr)) = body.last_mut() {
-            *expr = Expr::FnCall {
+            *expr = ExprKind::FnCall {
                 args: vec![expr.clone()],
-                callee: Box::new(Expr::Identifier("println".to_string())),
-            }
+                callee: Box::new(ExprKind::Identifier("println".to_string()).with_span(0..0)),
+            }.with_span(0..0)
         }
 
         Stmt::FnDeclaration {
@@ -81,6 +87,9 @@ impl<'a> Parser<'a> {
     fn next(&mut self) -> Token {
         let token = self.lexer.next().unwrap_or(Token::Eof);
         self.current_token = token.clone();
+
+        self.previous_span = self.current_span.clone();
+        self.current_span = self.lexer.span();
         token
     }
 
@@ -107,5 +116,15 @@ impl<'a> Parser<'a> {
         self.source
             .errors
             .add_error(SyntaxError::new("Unexpected token", self.lexer.span()))
+    }
+
+    /// Returns the start of the current token.
+    fn node_start(&self) -> usize {
+        self.current_span.start
+    }
+
+    /// Returns the end of the last token.
+    fn node_end(&self) -> usize {
+        self.previous_span.end
     }
 }

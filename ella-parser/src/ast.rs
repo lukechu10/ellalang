@@ -1,10 +1,19 @@
 //! AST (abstract syntax tree) data structure.
 
+use std::ops::Range;
+
 use crate::lexer::Token;
+
+/// Wrapper around [`ExprKind`]
+#[derive(Debug, Clone, PartialEq)]
+pub struct Expr {
+    pub kind: ExprKind,
+    pub span: Range<usize>,
+}
 
 /// Represents an expression node in the AST.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expr {
+pub enum ExprKind {
     /// Number literal (represented using floating point `f64`).
     NumberLit(f64),
     /// Boolean literal.
@@ -14,10 +23,7 @@ pub enum Expr {
     /// An identifier (e.g. `foo`).
     Identifier(String),
     /// A function call (e.g. `foo(1, bar, baz())`).
-    FnCall {
-        callee: Box<Expr>,
-        args: Vec<Expr>,
-    },
+    FnCall { callee: Box<Expr>, args: Vec<Expr> },
     /// A binary expression (e.g. `1+1`).
     Binary {
         lhs: Box<Expr>,
@@ -25,22 +31,22 @@ pub enum Expr {
         rhs: Box<Expr>,
     },
     /// An unary expression (e.g. `-1`).
-    Unary {
-        op: Token,
-        arg: Box<Expr>,
-    },
+    Unary { op: Token, arg: Box<Expr> },
     /// Error token. Used for error recovery.
     Error,
+}
+
+impl ExprKind {
+    pub fn with_span(self, span: Range<usize>) -> Expr {
+        Expr { kind: self, span }
+    }
 }
 
 /// Represents a statement node in the AST.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     /// Variable declaration.
-    LetDeclaration {
-        ident: String,
-        initializer: Expr,
-    },
+    LetDeclaration { ident: String, initializer: Expr },
     /// Function declaration.
     FnDeclaration {
         ident: String,
@@ -57,10 +63,7 @@ pub enum Stmt {
         else_block: Option<Vec<Stmt>>,
     },
     /// While statement.
-    WhileStmt {
-        condition: Expr,
-        body: Vec<Stmt>,
-    },
+    WhileStmt { condition: Expr, body: Vec<Stmt> },
     /// Expression statement (expression with side effect).
     ExprStmt(Expr),
     /// Return statement.
