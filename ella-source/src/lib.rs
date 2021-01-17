@@ -86,6 +86,7 @@ impl<'a> Into<Source<'a>> for &'a str {
 pub struct SyntaxError {
     message: String,
     span: Range<usize>,
+    help: Vec<String>,
 }
 
 impl SyntaxError {
@@ -94,7 +95,14 @@ impl SyntaxError {
         Self {
             message: message.to_string(),
             span,
+            help: Vec::new(),
         }
+    }
+
+    /// Adds a help message to the diagnostic.
+    pub fn with_help(mut self, message: impl ToString) -> Self {
+        self.help.push(message.to_string());
+        self
     }
 }
 
@@ -175,6 +183,10 @@ impl<'a> fmt::Display for Source<'a> {
                 )?;
             } else {
                 // TODO: multi-line errors
+            }
+            // print help messages
+            for help_msg in &error.help {
+                writeln!(f, "{}: {}", style("help").cyan().bright().bold(), help_msg)?;
             }
         }
 

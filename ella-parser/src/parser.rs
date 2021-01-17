@@ -88,7 +88,8 @@ impl<'a> Parser<'a> {
             body,
             ident: "<global>".to_string(),
             params: Vec::new(),
-        }.with_span(lo..self.node_end())
+        }
+        .with_span(lo..self.node_end())
     }
 }
 
@@ -118,10 +119,10 @@ impl<'a> Parser<'a> {
         if !self.eat(tok.clone()) {
             if tok == Token::Semi {
                 self.next();
-                self.source.errors.add_error(SyntaxError::new(
-                    "expected a `;` character",
-                    self.current_span.clone(),
-                ))
+                self.source.errors.add_error(
+                    SyntaxError::new("expected a `;` character", self.current_span.clone())
+                        .with_help("consider adding a `;` character"),
+                )
             } else {
                 self.next();
                 self.unexpected()
