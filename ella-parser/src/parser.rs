@@ -71,7 +71,8 @@ impl<'a> Parser<'a> {
             *expr = ExprKind::FnCall {
                 args: vec![expr.clone()],
                 callee: Box::new(ExprKind::Identifier("println".to_string()).with_span(0..0)),
-            }.with_span(0..0)
+            }
+            .with_span(0..0)
         }
 
         Stmt::FnDeclaration {
@@ -105,17 +106,26 @@ impl<'a> Parser<'a> {
     }
 
     fn expect(&mut self, tok: Token) {
-        if !self.eat(tok) {
-            self.next();
-            self.unexpected()
+        if !self.eat(tok.clone()) {
+            if tok == Token::Semi {
+                self.next();
+                self.source.errors.add_error(SyntaxError::new(
+                    "expected a `;` character",
+                    self.current_span.clone(),
+                ))
+            } else {
+                self.next();
+                self.unexpected()
+            }
         }
     }
 
     /// Raises an unexpected token error.
     fn unexpected(&mut self) {
-        self.source
-            .errors
-            .add_error(SyntaxError::new("unexpected token", self.lexer.span()))
+        self.source.errors.add_error(SyntaxError::new(
+            "unexpected token",
+            self.current_span.clone(),
+        ))
     }
 
     /// Returns the start of the current token.

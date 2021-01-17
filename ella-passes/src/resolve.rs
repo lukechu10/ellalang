@@ -271,12 +271,6 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                     );
                 }
             }
-            ExprKind::FnCall { callee, args } => {
-                self.visit_expr(callee);
-                for expr in args {
-                    self.visit_expr(expr);
-                }
-            }
             _ => {}
         }
     }

@@ -131,6 +131,7 @@ impl<'a> fmt::Display for Source<'a> {
         for error in errors.iter() {
             let start = self.lookup_line_col(error.span.start);
             let end = self.lookup_line_col(error.span.end);
+
             writeln!(
                 f,
                 "{error}{message}\n{filename}",
@@ -161,7 +162,10 @@ impl<'a> fmt::Display for Source<'a> {
                     f,
                     "{} {} {}",
                     " ".repeat(start.1),
-                    style("^".repeat(end.1 - start.1)).red().bright().bold(),
+                    style("^".repeat(usize::max(end.1 - start.1, 1))) // at least 1 `^` character (e.g. for missing tokens)
+                        .red()
+                        .bright()
+                        .bold(),
                     style(&error.message).red().bright().bold(),
                 )?;
             } else {
