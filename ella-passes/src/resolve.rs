@@ -255,7 +255,7 @@ impl<'a> Visitor<'a> for Resolver<'a> {
 
         match &expr.kind {
             ExprKind::Identifier(ident) => {
-                let symbol = self.resolve_symbol(ident, 0..0);
+                let symbol = self.resolve_symbol(ident, expr.span.clone());
                 if let Some((offset, symbol)) = symbol {
                     self.resolved_symbol_table.insert(
                         expr as *const Expr,

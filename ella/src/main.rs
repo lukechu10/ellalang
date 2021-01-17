@@ -41,7 +41,7 @@ fn repl() {
         resolver.resolve_top_level(&ast);
         resolve_result = resolver.resolve_result();
 
-        eprintln!("{}", source.errors);
+        eprintln!("{}", source);
         if source.has_no_errors() {
             let mut codegen = Codegen::new("<global>".to_string(), resolve_result, &source);
 
@@ -90,7 +90,7 @@ fn interpret_file_contents(source: &str) {
     resolve_result = resolver.resolve_result();
 
     if !source.has_no_errors() {
-        eprintln!("{}", source.errors);
+        eprintln!("{}", source);
     } else {
         let mut codegen = Codegen::new("<global>".to_string(), resolve_result, &source);
 

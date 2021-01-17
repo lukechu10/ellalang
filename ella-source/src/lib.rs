@@ -37,6 +37,18 @@ impl<'a> Source<'a> {
             }
         }
     }
+
+    /// Returns the line and column which the `pos` is located at as a tuple `(line, col)`.
+    pub fn lookup_line_col(&self, pos: usize) -> (usize, usize) {
+        if self.lines.is_empty() {
+            (0, pos)
+        } else {
+            match self.lines.binary_search(&pos) {
+                Ok(line) => (line, 0),
+                Err(line) => (line - 1, pos - self.lines[line - 1]),
+            }
+        }
+    }
 }
 
 fn get_newline_pos(src: &str) -> Vec<usize> {
@@ -100,15 +112,18 @@ impl Default for ErrorReporter {
     }
 }
 
-impl fmt::Display for ErrorReporter {
+impl<'a> fmt::Display for Source<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let errors = self.errors.borrow();
+        let errors = self.errors.errors.borrow();
         for error in errors.iter() {
+            let (line, col) = self.lookup_line_col(error.span.start);
             writeln!(
                 f,
-                "ERROR: {message} at position {position}",
+                "ERROR: {message} at position {filename}:{line}:{col}",
                 message = error.message,
-                position = error.span.start
+                filename = "unknown", // FIXME
+                line = line + 1, // +1 for 1-based line position
+                col = col + 1, // +1 for 1-based column position
             )?;
         }
 

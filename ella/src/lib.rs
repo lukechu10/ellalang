@@ -32,7 +32,7 @@ pub fn interpret(source: &str) {
     resolver.resolve_top_level(&ast);
     resolve_result = resolver.resolve_result();
 
-    eprintln!("{}", source.errors);
+    eprintln!("{}", source);
     assert!(source.has_no_errors());
 
     let mut codegen = Codegen::new("<global>".to_string(), resolve_result, &source);

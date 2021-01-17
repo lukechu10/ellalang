@@ -30,7 +30,7 @@ fn codegen_str<'a>(source: &str, builtin_vars: &'a BuiltinVars) -> (Chunk, Vm<'a
     resolver.resolve_top_level(&ast);
     resolve_result = resolver.resolve_result();
 
-    eprintln!("{}", source.errors);
+    eprintln!("{}", source);
     assert!(source.has_no_errors());
 
     let mut codegen = Codegen::new("<global>".to_string(), resolve_result, &source);
