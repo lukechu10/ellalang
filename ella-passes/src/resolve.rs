@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::ops::Range;
 use std::rc::Rc;
 
-use ella_parser::ast::{Expr, Stmt};
+use ella_parser::ast::{Expr, ExprKind, Stmt, StmtKind};
 use ella_parser::visitor::{walk_expr, Visitor};
 use ella_source::{Source, SyntaxError};
 use ella_value::BuiltinVars;
@@ -185,8 +185,7 @@ impl<'a> Resolver<'a> {
             if symbol.borrow().ident == ident {
                 if self.find_function_scope_depth(symbol.borrow().scope_depth) == 0 {
                     return Some((i, symbol.clone()));
-                }
-                else if self.in_same_function_scope(
+                } else if self.in_same_function_scope(
                     symbol.borrow().scope_depth,
                     *self.function_scope_depths.last().unwrap(),
                 ) {
@@ -223,7 +222,7 @@ impl<'a> Resolver<'a> {
             }
         }
         self.source.errors.add_error(SyntaxError::new(
-            format!("Cannot resolve symbol {}", ident),
+            format!("cannot resolve symbol {}", ident),
             span,
         ));
         None
@@ -231,13 +230,13 @@ impl<'a> Resolver<'a> {
 
     /// Resolve a top-level function [`Stmt`]. This should be used over calling `visit_stmt`.
     pub fn resolve_top_level(&mut self, func: &'a Stmt) {
-        match func {
-            Stmt::FnDeclaration { body, .. } => {
+        match &func.kind {
+            StmtKind::FnDeclaration { body, .. } => {
                 for stmt in body {
                     self.visit_stmt(stmt);
                 }
             }
-            _ => panic!("func is not a Stmt::FnDeclaration"),
+            _ => panic!("func is not a StmtKind::FnDeclaration"),
         }
     }
 
@@ -253,9 +252,9 @@ impl<'a> Visitor<'a> for Resolver<'a> {
     fn visit_expr(&mut self, expr: &'a Expr) {
         walk_expr(self, expr);
 
-        match expr {
-            Expr::Identifier(ident) => {
-                let symbol = self.resolve_symbol(ident, 0..0);
+        match &expr.kind {
+            ExprKind::Identifier(ident) => {
+                let symbol = self.resolve_symbol(ident, expr.span.clone());
                 if let Some((offset, symbol)) = symbol {
                     self.resolved_symbol_table.insert(
                         expr as *const Expr,
@@ -271,12 +270,6 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                     );
                 }
             }
-            Expr::FnCall { callee, args } => {
-                self.visit_expr(callee);
-                for expr in args {
-                    self.visit_expr(expr);
-                }
-            }
             _ => {}
         }
     }
@@ -284,12 +277,12 @@ impl<'a> Visitor<'a> for Resolver<'a> {
     fn visit_stmt(&mut self, stmt: &'a Stmt) {
         // Do not use default walking logic.
 
-        match stmt {
-            Stmt::LetDeclaration { ident, initializer } => {
+        match &stmt.kind {
+            StmtKind::LetDeclaration { ident, initializer } => {
                 self.visit_expr(initializer);
                 self.add_symbol(ident.clone(), Some(stmt));
             }
-            Stmt::FnDeclaration {
+            StmtKind::FnDeclaration {
                 ident,
                 params,
                 body,
@@ -324,14 +317,14 @@ impl<'a> Visitor<'a> for Resolver<'a> {
 
                 self.current_func_offset = old_func_offset;
             }
-            Stmt::Block(body) => {
+            StmtKind::Block(body) => {
                 self.enter_scope();
                 for stmt in body {
                     self.visit_stmt(stmt);
                 }
                 self.exit_scope();
             }
-            Stmt::IfElseStmt {
+            StmtKind::IfElseStmt {
                 condition,
                 if_block,
                 else_block,
@@ -350,7 +343,7 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                     self.exit_scope();
                 }
             }
-            Stmt::WhileStmt { condition, body } => {
+            StmtKind::WhileStmt { condition, body } => {
                 self.visit_expr(condition);
                 self.enter_scope();
                 for stmt in body {
@@ -358,9 +351,9 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                 }
                 self.exit_scope();
             }
-            Stmt::ExprStmt(expr) => self.visit_expr(expr),
-            Stmt::ReturnStmt(expr) => self.visit_expr(expr),
-            Stmt::Error => {}
+            StmtKind::ExprStmt(expr) => self.visit_expr(expr),
+            StmtKind::ReturnStmt(expr) => self.visit_expr(expr),
+            StmtKind::Error => {}
         }
     }
 }

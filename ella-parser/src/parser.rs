@@ -1,10 +1,11 @@
 //! Parse a [`Source`] into an AST (abstract syntax tree).
 
-use crate::ast::{Expr, Stmt};
+use crate::ast::{Expr, ExprKind, Stmt, StmtKind};
 use crate::lexer::Token;
 use ella_source::{Source, SyntaxError};
 use logos::{Lexer, Logos};
 use std::mem;
+use std::ops::Range;
 
 mod expr;
 mod stmt;
@@ -15,6 +16,9 @@ pub use stmt::*;
 pub struct Parser<'a> {
     /// Cached token for peeking.
     current_token: Token,
+    previous_span: Range<usize>,
+    /// Location of the current token.
+    current_span: Range<usize>,
     lexer: Lexer<'a, Token>,
     /// Source code.
     source: &'a Source<'a>,
@@ -26,6 +30,8 @@ impl<'a> Parser<'a> {
         let mut lexer = Token::lexer(source.content);
         Self {
             current_token: lexer.next().unwrap(),
+            previous_span: 0..0,
+            current_span: lexer.span(),
             lexer,
             source,
         }
@@ -35,6 +41,8 @@ impl<'a> Parser<'a> {
 impl<'a> Parser<'a> {
     /// Returns an anonymous top level function.
     pub fn parse_program(&mut self) -> Stmt {
+        let lo = self.node_start();
+
         let mut body = Vec::new();
         loop {
             body.push(self.parse_declaration());
@@ -43,16 +51,19 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Stmt::FnDeclaration {
+        StmtKind::FnDeclaration {
             body,
             ident: "<global>".to_string(),
             params: Vec::new(),
         }
+        .with_span(lo..self.node_end())
     }
 
     /// Returns an anonymous top level function.
     /// If the last statement is an [`Stmt::ExprStmt`], it will create a function call to `println()`.
     pub fn parse_repl_input(&mut self) -> Stmt {
+        let lo = self.node_start();
+
         let mut body = Vec::new();
         loop {
             body.push(self.parse_declaration());
@@ -61,18 +72,23 @@ impl<'a> Parser<'a> {
             }
         }
 
-        if let Some(Stmt::ExprStmt(expr)) = body.last_mut() {
-            *expr = Expr::FnCall {
+        if let Some(Stmt {
+            kind: StmtKind::ExprStmt(expr),
+            ..
+        }) = body.last_mut()
+        {
+            *expr = ExprKind::FnCall {
                 args: vec![expr.clone()],
-                callee: Box::new(Expr::Identifier("println".to_string())),
+                callee: Box::new(ExprKind::Identifier("println".to_string()).with_span(0..0)),
             }
+            .with_span(0..0)
         }
 
-        Stmt::FnDeclaration {
+        StmtKind::FnDeclaration {
             body,
             ident: "<global>".to_string(),
             params: Vec::new(),
-        }
+        }.with_span(lo..self.node_end())
     }
 }
 
@@ -81,6 +97,9 @@ impl<'a> Parser<'a> {
     fn next(&mut self) -> Token {
         let token = self.lexer.next().unwrap_or(Token::Eof);
         self.current_token = token.clone();
+
+        self.previous_span = self.current_span.clone();
+        self.current_span = self.lexer.span();
         token
     }
 
@@ -96,16 +115,35 @@ impl<'a> Parser<'a> {
     }
 
     fn expect(&mut self, tok: Token) {
-        if !self.eat(tok) {
-            self.next();
-            self.unexpected()
+        if !self.eat(tok.clone()) {
+            if tok == Token::Semi {
+                self.next();
+                self.source.errors.add_error(SyntaxError::new(
+                    "expected a `;` character",
+                    self.current_span.clone(),
+                ))
+            } else {
+                self.next();
+                self.unexpected()
+            }
         }
     }
 
     /// Raises an unexpected token error.
     fn unexpected(&mut self) {
-        self.source
-            .errors
-            .add_error(SyntaxError::new("Unexpected token", self.lexer.span()))
+        self.source.errors.add_error(SyntaxError::new(
+            "unexpected token",
+            self.current_span.clone(),
+        ))
+    }
+
+    /// Returns the start of the current token.
+    fn node_start(&self) -> usize {
+        self.current_span.start
+    }
+
+    /// Returns the end of the last token.
+    fn node_end(&self) -> usize {
+        self.previous_span.end
     }
 }

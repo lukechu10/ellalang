@@ -2,10 +2,13 @@
 
 use std::{cell::RefCell, fmt, ops::Range};
 
+use console::style;
+
 /// Represents source code.
 pub struct Source<'a> {
     /// Original source code.
     pub content: &'a str,
+    lines: Vec<usize>,
     /// Accumulated errors.
     pub errors: ErrorReporter,
 }
@@ -15,6 +18,7 @@ impl<'a> Source<'a> {
     pub fn new(content: &'a str) -> Self {
         Self {
             content,
+            lines: get_newline_pos(content),
             errors: ErrorReporter::new(),
         }
     }
@@ -23,6 +27,52 @@ impl<'a> Source<'a> {
     pub fn has_no_errors(&self) -> bool {
         self.errors.errors.borrow().len() == 0
     }
+
+    /// Returns the line which the `pos` is located at.
+    pub fn lookup_line(&self, pos: usize) -> usize {
+        if self.lines.is_empty() {
+            0
+        } else {
+            match self.lines.binary_search(&pos) {
+                Ok(line) => line,
+                Err(line) => line - 1,
+            }
+        }
+    }
+
+    /// Returns the line and column which the `pos` is located at as a tuple `(line, col)`.
+    pub fn lookup_line_col(&self, pos: usize) -> (usize, usize) {
+        if self.lines.is_empty() {
+            (0, pos)
+        } else {
+            match self.lines.binary_search(&pos) {
+                Ok(line) => (line, 0),
+                Err(line) => (line - 1, pos - self.lines[line - 1]),
+            }
+        }
+    }
+
+    /// Gets the slice at `line`.
+    pub fn get_line(&self, line: usize) -> &str {
+        let start = self.lines[line];
+        if line == self.lines.len() - 1 {
+            &self.content[start..]
+        } else {
+            let end = self.lines[line + 1] - 1; // don't get newline character
+            &self.content[start..end]
+        }
+    }
+}
+
+fn get_newline_pos(src: &str) -> Vec<usize> {
+    let mut pos = vec![0]; // 0 is position of first newline char
+
+    for (index, ch) in src.char_indices() {
+        if ch == '\n' {
+            pos.push(index + 1); // + 1 to get char after newline
+        }
+    }
+    pos
 }
 
 impl<'a> Into<Source<'a>> for &'a str {
@@ -75,16 +125,52 @@ impl Default for ErrorReporter {
     }
 }
 
-impl fmt::Display for ErrorReporter {
+impl<'a> fmt::Display for Source<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let errors = self.errors.borrow();
+        let errors = self.errors.errors.borrow();
         for error in errors.iter() {
+            let start = self.lookup_line_col(error.span.start);
+            let end = self.lookup_line_col(error.span.end);
+
             writeln!(
                 f,
-                "ERROR: {message} at position {position}",
-                message = error.message,
-                position = error.span.start
+                "{error}{message}\n{filename}",
+                error = style("error").red().bright().bold(),
+                message = style(format!(": {errMessage}", errMessage = error.message,)).bold(),
+                filename = format!(
+                    "   {arrow} {filename}",
+                    arrow = style("-->").cyan().bright().bold(),
+                    filename = format!(
+                        "{filename}:{line}:{col}",
+                        filename = "unknown", // FIXME
+                        line = start.0 + 1,   // +1 for 1-based line position
+                        col = start.1 + 1,    // +1 for 1-based column position
+                    )
+                ),
             )?;
+            if start.0 == end.0 {
+                writeln!(f, "    {}", style("|").cyan().bright().bold())?;
+                write!(
+                    f,
+                    "{line}{}",
+                    style("|").cyan().bright().bold(),
+                    line = style(format!("{:<4}", start.0 + 1)).cyan().bright().bold(),
+                )?;
+                writeln!(f, " {}", self.get_line(start.0))?;
+                write!(f, "    {}", style("|").cyan().bright().bold())?;
+                writeln!(
+                    f,
+                    "{} {} {}",
+                    " ".repeat(start.1),
+                    style("^".repeat(usize::max(end.1 - start.1, 1))) // at least 1 `^` character (e.g. for missing tokens)
+                        .red()
+                        .bright()
+                        .bold(),
+                    style(&error.message).red().bright().bold(),
+                )?;
+            } else {
+                // TODO: multi-line errors
+            }
         }
 
         Ok(())

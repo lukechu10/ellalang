@@ -149,7 +149,7 @@ impl Chunk {
         if offset > 0 && self.lines[offset] == self.lines[offset - 1] {
             write!(f, "{:>4} ", "|")?;
         } else {
-            write!(f, "{:>4} ", self.lines[offset])?;
+            write!(f, "{:>4} ", self.lines[offset] + 1)?; // +1 for 1-based line position
         }
 
         let blank_msg = String::new();

@@ -2,15 +2,27 @@
 source: ella-parser/src/parser/stmt.rs
 expression: "stmt(\"let x = 1 + 2;\")"
 ---
-LetDeclaration {
-    ident: "x",
-    initializer: Binary {
-        lhs: NumberLit(
-            1.0,
-        ),
-        op: Plus,
-        rhs: NumberLit(
-            2.0,
-        ),
+Stmt {
+    kind: LetDeclaration {
+        ident: "x",
+        initializer: Expr {
+            kind: Binary {
+                lhs: Expr {
+                    kind: NumberLit(
+                        1.0,
+                    ),
+                    span: 8..9,
+                },
+                op: Plus,
+                rhs: Expr {
+                    kind: NumberLit(
+                        2.0,
+                    ),
+                    span: 12..13,
+                },
+            },
+            span: 8..13,
+        },
     },
+    span: 0..14,
 }

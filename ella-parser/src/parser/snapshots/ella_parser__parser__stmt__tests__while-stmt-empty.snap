@@ -2,9 +2,15 @@
 source: ella-parser/src/parser/stmt.rs
 expression: "stmt(r#\"while true {}\"#)"
 ---
-WhileStmt {
-    condition: BoolLit(
-        true,
-    ),
-    body: [],
+Stmt {
+    kind: WhileStmt {
+        condition: Expr {
+            kind: BoolLit(
+                true,
+            ),
+            span: 6..10,
+        },
+        body: [],
+    },
+    span: 0..13,
 }

@@ -1,11 +1,13 @@
 //! Lowers AST into a `Chunk` (bytecode).
 
+use ella_parser::ast::{ExprKind, StmtKind};
 use ella_parser::{
     ast::{Expr, Stmt},
     lexer::Token,
     visitor::Visitor,
 };
 use ella_passes::resolve::{ResolveResult, Symbol};
+use ella_source::Source;
 use ella_value::chunk::{Chunk, OpCode};
 use ella_value::object::{Function, Obj, ObjKind};
 use ella_value::{BuiltinVars, Value};
@@ -22,15 +24,17 @@ pub struct Codegen<'a> {
     /// Every time a new scope is created, a new value is pushed onto the stack.
     /// This is to keep track of how many `pop` instructions to emit when exiting the scope.
     scope_stack: Vec<Vec<Rc<RefCell<Symbol>>>>,
+    source: &'a Source<'a>,
 }
 
 impl<'a> Codegen<'a> {
-    pub fn new(name: String, resolve_result: ResolveResult<'a>) -> Self {
+    pub fn new(name: String, resolve_result: ResolveResult<'a>, source: &'a Source<'a>) -> Self {
         Self {
             chunk: Chunk::new(name),
             constant_strings: HashMap::new(),
             resolve_result,
             scope_stack: vec![Vec::new()],
+            source,
         }
     }
 
@@ -46,13 +50,13 @@ impl<'a> Codegen<'a> {
     /// # Params
     /// * `func` - The function to codegen for.
     pub fn codegen_function(&mut self, func: &'a Stmt) {
-        match func {
-            Stmt::FnDeclaration { body, .. } => {
+        match &func.kind {
+            StmtKind::FnDeclaration { body, .. } => {
                 for stmt in body {
                     self.visit_stmt(stmt);
                 }
             }
-            _ => panic!("func is not a Stmt::FnDeclaration"),
+            _ => panic!("func is not a StmtKind::FnDeclaration"),
         }
 
         if DUMP_CHUNK {
@@ -116,6 +120,8 @@ impl<'a> Visitor<'a> for Codegen<'a> {
     fn visit_expr(&mut self, expr: &'a Expr) {
         // Do not use default walking logic.
 
+        let line = self.source.lookup_line(expr.span.start);
+
         /// Generate codegen for shorthand assignments (e.g. `+=`).
         macro_rules! gen_op_assign {
             ($instr: expr, $lhs: expr, $rhs: expr, $line: expr) => {{
@@ -165,23 +171,23 @@ impl<'a> Visitor<'a> for Codegen<'a> {
             }};
         }
 
-        match expr {
-            Expr::NumberLit(val) => {
+        match &expr.kind {
+            ExprKind::NumberLit(val) => {
                 if *val == 0.0 {
-                    self.chunk.write_chunk(OpCode::Ld0, 0);
+                    self.chunk.write_chunk(OpCode::Ld0, line);
                 } else if *val == 1.0 {
-                    self.chunk.write_chunk(OpCode::Ld1, 0);
+                    self.chunk.write_chunk(OpCode::Ld1, line);
                 } else {
-                    self.chunk.emit_ldf64(*val, 0);
+                    self.chunk.emit_ldf64(*val, line);
                 }
             }
-            Expr::BoolLit(val) => {
+            ExprKind::BoolLit(val) => {
                 match val {
-                    true => self.chunk.write_chunk(OpCode::LdTrue, 0),
-                    false => self.chunk.write_chunk(OpCode::LdFalse, 0),
+                    true => self.chunk.write_chunk(OpCode::LdTrue, line),
+                    false => self.chunk.write_chunk(OpCode::LdFalse, line),
                 };
             }
-            Expr::StringLit(val) => {
+            ExprKind::StringLit(val) => {
                 let obj = if let Some(obj) = self.constant_strings.get(val) {
                     // reuse same String
                     obj.clone()
@@ -191,39 +197,39 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     obj
                 };
                 let constant = self.chunk.add_constant(Value::Object(obj));
-                self.chunk.write_chunk(OpCode::Ldc, 0);
-                self.chunk.write_chunk(constant, 0);
+                self.chunk.write_chunk(OpCode::Ldc, line);
+                self.chunk.write_chunk(constant, line);
             }
-            Expr::Identifier(ident) => {
+            ExprKind::Identifier(ident) => {
                 let resolved_symbol = *self.resolve_result.lookup_identifier(expr).unwrap();
 
                 if resolved_symbol.is_global {
-                    self.chunk.write_chunk(OpCode::LdGlobal, 0);
+                    self.chunk.write_chunk(OpCode::LdGlobal, line);
                     self.chunk
                         .add_debug_annotation_at_last(format!("load global variable {}", ident));
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, 0);
+                    self.chunk.write_chunk(resolved_symbol.offset as u8, line);
                 } else if resolved_symbol.is_upvalue {
-                    self.chunk.write_chunk(OpCode::LdUpVal, 0);
+                    self.chunk.write_chunk(OpCode::LdUpVal, line);
                     self.chunk
                         .add_debug_annotation_at_last(format!("load upvalue {}", ident));
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, 0);
+                    self.chunk.write_chunk(resolved_symbol.offset as u8, line);
                 } else {
-                    self.chunk.write_chunk(OpCode::LdLoc, 0);
+                    self.chunk.write_chunk(OpCode::LdLoc, line);
                     self.chunk
                         .add_debug_annotation_at_last(format!("load local variable {}", ident));
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, 0);
+                    self.chunk.write_chunk(resolved_symbol.offset as u8, line);
                 }
             }
-            Expr::FnCall { callee, args } => {
+            ExprKind::FnCall { callee, args } => {
                 let arity = args.len() as u8;
                 for arg in args {
                     self.visit_expr(arg);
                 }
                 self.visit_expr(callee);
-                self.chunk.write_chunk(OpCode::Calli, 0);
-                self.chunk.write_chunk(arity, 0);
+                self.chunk.write_chunk(OpCode::Calli, line);
+                self.chunk.write_chunk(arity, line);
             }
-            Expr::Binary { lhs, op, rhs } => {
+            ExprKind::Binary { lhs, op, rhs } => {
                 match op {
                     Token::Equals
                     | Token::PlusEquals
@@ -239,86 +245,88 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 }
                 match op {
                     Token::Plus => {
-                        self.chunk.write_chunk(OpCode::Add, 0);
+                        self.chunk.write_chunk(OpCode::Add, line);
                     }
                     Token::Minus => {
-                        self.chunk.write_chunk(OpCode::Sub, 0);
+                        self.chunk.write_chunk(OpCode::Sub, line);
                     }
                     Token::Asterisk => {
-                        self.chunk.write_chunk(OpCode::Mul, 0);
+                        self.chunk.write_chunk(OpCode::Mul, line);
                     }
                     Token::Slash => {
-                        self.chunk.write_chunk(OpCode::Div, 0);
+                        self.chunk.write_chunk(OpCode::Div, line);
                     }
                     Token::Equals => {
                         let resolved_symbol =
                             *self.resolve_result.lookup_identifier(lhs.as_ref()).unwrap();
 
                         if resolved_symbol.is_global {
-                            self.chunk.write_chunk(OpCode::StGlobal, 0);
-                            self.chunk.write_chunk(resolved_symbol.offset as u8, 0);
+                            self.chunk.write_chunk(OpCode::StGlobal, line);
+                            self.chunk.write_chunk(resolved_symbol.offset as u8, line);
                         } else if resolved_symbol.is_upvalue {
-                            self.chunk.write_chunk(OpCode::StUpVal, 0);
-                            self.chunk.write_chunk(resolved_symbol.offset as u8, 0);
+                            self.chunk.write_chunk(OpCode::StUpVal, line);
+                            self.chunk.write_chunk(resolved_symbol.offset as u8, line);
                         } else {
                             self.chunk.write_chunk(OpCode::StLoc, 0);
-                            self.chunk.write_chunk(resolved_symbol.offset as u8, 0);
+                            self.chunk.write_chunk(resolved_symbol.offset as u8, line);
                         }
                     }
-                    Token::PlusEquals => gen_op_assign!(OpCode::Add, lhs, rhs, 0),
-                    Token::MinusEquals => gen_op_assign!(OpCode::Sub, lhs, rhs, 0),
-                    Token::AsteriskEquals => gen_op_assign!(OpCode::Mul, lhs, rhs, 0),
-                    Token::SlashEquals => gen_op_assign!(OpCode::Div, lhs, rhs, 0),
+                    Token::PlusEquals => gen_op_assign!(OpCode::Add, lhs, rhs, line),
+                    Token::MinusEquals => gen_op_assign!(OpCode::Sub, lhs, rhs, line),
+                    Token::AsteriskEquals => gen_op_assign!(OpCode::Mul, lhs, rhs, line),
+                    Token::SlashEquals => gen_op_assign!(OpCode::Div, lhs, rhs, line),
                     Token::EqualsEquals => {
-                        self.chunk.write_chunk(OpCode::Eq, 0);
+                        self.chunk.write_chunk(OpCode::Eq, line);
                     }
                     Token::NotEquals => {
-                        self.chunk.write_chunk(OpCode::Eq, 0);
-                        self.chunk.write_chunk(OpCode::Not, 0);
+                        self.chunk.write_chunk(OpCode::Eq, line);
+                        self.chunk.write_chunk(OpCode::Not, line);
                     }
                     Token::LessThan => {
-                        self.chunk.write_chunk(OpCode::Less, 0);
+                        self.chunk.write_chunk(OpCode::Less, line);
                     }
                     Token::LessThanEquals => {
                         // a <= b equivalent to !(a > b)
-                        self.chunk.write_chunk(OpCode::Greater, 0);
-                        self.chunk.write_chunk(OpCode::Not, 0);
+                        self.chunk.write_chunk(OpCode::Greater, line);
+                        self.chunk.write_chunk(OpCode::Not, line);
                     }
                     Token::GreaterThan => {
-                        self.chunk.write_chunk(OpCode::Greater, 0);
+                        self.chunk.write_chunk(OpCode::Greater, line);
                     }
                     Token::GreaterThanEquals => {
                         // a >= b equivalent to !(a < b)
-                        self.chunk.write_chunk(OpCode::Less, 0);
-                        self.chunk.write_chunk(OpCode::Not, 0);
+                        self.chunk.write_chunk(OpCode::Less, line);
+                        self.chunk.write_chunk(OpCode::Not, line);
                     }
                     _ => unreachable!(),
                 };
             }
-            Expr::Unary { op, arg } => {
+            ExprKind::Unary { op, arg } => {
                 self.visit_expr(arg);
                 match op {
-                    Token::LogicalNot => self.chunk.write_chunk(OpCode::Not, 0),
-                    Token::Minus => self.chunk.write_chunk(OpCode::Neg, 0),
+                    Token::LogicalNot => self.chunk.write_chunk(OpCode::Not, line),
+                    Token::Minus => self.chunk.write_chunk(OpCode::Neg, line),
                     _ => unreachable!(),
                 };
             }
-            Expr::Error => unreachable!(),
+            ExprKind::Error => unreachable!(),
         }
     }
 
     fn visit_stmt(&mut self, stmt: &'a Stmt) {
         // Do not use default walking logic.
 
-        match stmt {
-            Stmt::LetDeclaration {
+        let line = self.source.lookup_line(stmt.span.start);
+
+        match &stmt.kind {
+            StmtKind::LetDeclaration {
                 ident: _,
                 initializer,
             } => {
                 self.visit_expr(initializer); // Push value of expression onto top of stack.
                 self.add_symbol(stmt);
             }
-            Stmt::FnDeclaration {
+            StmtKind::FnDeclaration {
                 ident,
                 params,
                 body: _, // Body is codegen in a new `Codegen` instance.
@@ -329,7 +337,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
 
                 // Create a new `Codegen` instance, codegen the function, and add the chunk to the `ObjKind::Fn`.
                 let fn_chunk = {
-                    let mut cg = Codegen::new(ident.clone(), self.resolve_result);
+                    let mut cg = Codegen::new(ident.clone(), self.resolve_result, self.source);
                     cg.codegen_function(stmt);
                     cg.chunk
                 };
@@ -345,22 +353,22 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     }),
                 });
                 let constant = self.chunk.add_constant(Value::Object(func));
-                self.chunk.write_chunk(OpCode::Closure, 0);
-                self.chunk.write_chunk(constant, 0);
+                self.chunk.write_chunk(OpCode::Closure, line);
+                self.chunk.write_chunk(constant, line);
 
                 for symbol in &symbol.borrow().upvalues {
-                    self.chunk.write_chunk(symbol.is_local as u8, 0);
-                    self.chunk.write_chunk(symbol.index as u8, 0);
+                    self.chunk.write_chunk(symbol.is_local as u8, line);
+                    self.chunk.write_chunk(symbol.index as u8, line);
                 }
             }
-            Stmt::Block(body) => {
+            StmtKind::Block(body) => {
                 self.enter_scope();
                 for stmt in body {
                     self.visit_stmt(stmt);
                 }
                 self.exit_scope();
             }
-            Stmt::IfElseStmt {
+            StmtKind::IfElseStmt {
                 condition,
                 if_block,
                 else_block,
@@ -368,8 +376,8 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 self.visit_expr(condition);
                 self.chunk.add_debug_annotation_at_last("if condition");
 
-                let then_jump = self.emit_jump(OpCode::JmpIfFalse, 0);
-                self.chunk.write_chunk(OpCode::Pop, 0);
+                let then_jump = self.emit_jump(OpCode::JmpIfFalse, line);
+                self.chunk.write_chunk(OpCode::Pop, line);
 
                 self.enter_scope();
                 for stmt in if_block {
@@ -378,10 +386,10 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 self.exit_scope();
 
                 if let Some(else_block) = else_block {
-                    let else_jump = self.emit_jump(OpCode::Jmp, 0);
+                    let else_jump = self.emit_jump(OpCode::Jmp, line);
 
                     self.chunk.patch_jump(then_jump);
-                    self.chunk.write_chunk(OpCode::Pop, 0);
+                    self.chunk.write_chunk(OpCode::Pop, line);
 
                     self.enter_scope();
                     for stmt in else_block {
@@ -392,45 +400,49 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     self.chunk.patch_jump(else_jump);
                 } else {
                     self.chunk.patch_jump(then_jump);
-                    self.chunk.write_chunk(OpCode::Pop, 0);
+                    self.chunk.write_chunk(OpCode::Pop, line);
                 }
             }
-            Stmt::WhileStmt { condition, body } => {
+            StmtKind::WhileStmt { condition, body } => {
                 let loop_start = self.chunk.code.len();
                 self.visit_expr(condition);
 
-                let exit_jump = self.emit_jump(OpCode::JmpIfFalse, 0);
-                self.chunk.write_chunk(OpCode::Pop, 0);
+                let exit_jump = self.emit_jump(OpCode::JmpIfFalse, line);
+                self.chunk.write_chunk(OpCode::Pop, line);
 
                 for stmt in body {
                     self.visit_stmt(stmt);
                 }
 
-                self.emit_loop(OpCode::Loop, loop_start, 0);
+                self.emit_loop(OpCode::Loop, loop_start, line);
 
                 self.chunk.patch_jump(exit_jump);
-                self.chunk.write_chunk(OpCode::Pop, 0);
+                self.chunk.write_chunk(OpCode::Pop, line);
             }
-            Stmt::ExprStmt(expr) => {
+            StmtKind::ExprStmt(expr) => {
                 self.visit_expr(expr);
-                self.chunk.write_chunk(OpCode::Pop, 0);
+                self.chunk.write_chunk(OpCode::Pop, line);
             }
-            Stmt::ReturnStmt(expr) => {
-                if let Expr::NumberLit(number) = expr {
+            StmtKind::ReturnStmt(expr) => {
+                if let Expr {
+                    kind: ExprKind::NumberLit(number),
+                    ..
+                } = expr
+                {
                     if *number == 0.0 {
-                        self.chunk.write_chunk(OpCode::Ret0, 0);
+                        self.chunk.write_chunk(OpCode::Ret0, line);
                     } else if *number == 1.0 {
-                        self.chunk.write_chunk(OpCode::Ret1, 0);
+                        self.chunk.write_chunk(OpCode::Ret1, line);
                     } else {
-                        self.chunk.emit_ldf64(*number, 0);
-                        self.chunk.write_chunk(OpCode::Ret, 0);
+                        self.chunk.emit_ldf64(*number, line);
+                        self.chunk.write_chunk(OpCode::Ret, line);
                     }
                 } else {
                     self.visit_expr(expr);
-                    self.chunk.write_chunk(OpCode::Ret, 0);
+                    self.chunk.write_chunk(OpCode::Ret, line);
                 }
             }
-            Stmt::Error => unreachable!(),
+            StmtKind::Error => unreachable!(),
         }
     }
 }

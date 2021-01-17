@@ -1,9 +1,10 @@
 [package]
-name = "ella-source"
-version = "0.1.0"
 authors = ["Luke Chu <37006668+lukechu10@users.noreply.github.com>"]
 edition = "2018"
+name = "ella-source"
+version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+console = {version = "0.14", default-features = false}# for colors in error reporting
