@@ -1,3 +1,5 @@
+use crate::ast::StmtKind;
+
 use super::*;
 
 impl<'a> Parser<'a> {
@@ -19,15 +21,18 @@ impl<'a> Parser<'a> {
             Token::While => self.parse_while_stmt(),
             _ => {
                 // expression statement
+                let lo = self.node_start();
                 let expr = self.parse_expr();
-                let stmt = Stmt::ExprStmt(expr);
+                let stmt = StmtKind::ExprStmt(expr);
                 self.expect(Token::Semi);
-                stmt
+                stmt.with_span(lo..self.node_end())
             }
         }
     }
 
     pub fn parse_block_stmt(&mut self) -> Stmt {
+        let lo = self.node_start();
+
         self.expect(Token::OpenBrace);
 
         let mut body = Vec::new();
@@ -44,10 +49,12 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Stmt::Block(body)
+        StmtKind::Block(body).with_span(lo..self.node_end())
     }
 
     pub fn parse_if_else_stmt(&mut self) -> Stmt {
+        let lo = self.node_start();
+
         self.expect(Token::If);
 
         let condition = self.parse_expr();
@@ -67,7 +74,6 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-
         if self.eat(Token::Else) {
             else_block = Some(Vec::new());
             self.expect(Token::OpenBrace);
@@ -85,14 +91,17 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Stmt::IfElseStmt {
+        StmtKind::IfElseStmt {
             condition,
             if_block,
             else_block,
         }
+        .with_span(lo..self.node_end())
     }
 
     pub fn parse_while_stmt(&mut self) -> Stmt {
+        let lo = self.node_start();
+
         self.expect(Token::While);
         let condition = self.parse_expr();
         let mut body = Vec::new();
@@ -111,10 +120,12 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Stmt::WhileStmt { condition, body }
+        StmtKind::WhileStmt { condition, body }.with_span(lo..self.node_end())
     }
 
     fn parse_let_declaration(&mut self) -> Stmt {
+        let lo = self.node_start();
+
         self.expect(Token::Let);
         let ident = if let Token::Identifier(ref ident) = self.current_token {
             let ident = ident.clone();
@@ -122,15 +133,17 @@ impl<'a> Parser<'a> {
             ident
         } else {
             self.unexpected();
-            return Stmt::Error;
+            return StmtKind::Error.with_span(lo..self.node_end());
         };
         self.expect(Token::Equals);
         let initializer = self.parse_expr();
         self.expect(Token::Semi);
-        Stmt::LetDeclaration { ident, initializer }
+        StmtKind::LetDeclaration { ident, initializer }.with_span(lo..self.node_end())
     }
 
     fn parse_fn_declaration(&mut self) -> Stmt {
+        let lo = self.node_start();
+        
         self.expect(Token::Fn);
         let ident = if let Token::Identifier(ref ident) = self.current_token {
             let ident = ident.clone();
@@ -139,7 +152,7 @@ impl<'a> Parser<'a> {
         } else {
             self.next();
             self.unexpected();
-            return Stmt::Error;
+            return StmtKind::Error.with_span(lo..self.node_end());
         };
         self.expect(Token::OpenParen);
         let mut params = Vec::new();
@@ -151,7 +164,7 @@ impl<'a> Parser<'a> {
                     ident
                 } else {
                     self.unexpected();
-                    return Stmt::Error;
+                    return StmtKind::Error.with_span(lo..self.node_end());
                 });
 
                 if self.eat(Token::CloseParen) {
@@ -176,18 +189,20 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Stmt::FnDeclaration {
+        StmtKind::FnDeclaration {
             body,
             ident,
             params,
-        }
+        }.with_span(lo..self.node_end())
     }
 
     fn parse_return_stmt(&mut self) -> Stmt {
+        let lo = self.node_start();
+
         self.expect(Token::Return);
         let expr = self.parse_expr();
         self.expect(Token::Semi);
-        Stmt::ReturnStmt(expr)
+        StmtKind::ReturnStmt(expr).with_span(lo..self.node_end())
     }
 }
 

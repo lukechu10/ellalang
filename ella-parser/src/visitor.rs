@@ -1,6 +1,6 @@
 //! Visitor pattern for AST nodes.
 
-use crate::ast::{Expr, ExprKind, Stmt};
+use crate::ast::{Expr, ExprKind, Stmt, StmtKind};
 
 /// Visitor trait for AST walking logic.
 /// Implement this trait by overriding the hooks (`visit_*` methods).
@@ -51,18 +51,18 @@ pub fn walk_stmt<'ast>(visitor: &mut impl Visitor<'ast>, stmt: &'ast Stmt) {
         };
     }
 
-    match stmt {
-        Stmt::LetDeclaration {
+    match &stmt.kind {
+        StmtKind::LetDeclaration {
             ident: _,
             initializer,
         } => visitor.visit_expr(initializer),
-        Stmt::FnDeclaration {
+        StmtKind::FnDeclaration {
             ident: _,
             params: _,
             body,
         } => visit_stmt_list!(visitor, body),
-        Stmt::Block(body) => visit_stmt_list!(visitor, body),
-        Stmt::IfElseStmt {
+        StmtKind::Block(body) => visit_stmt_list!(visitor, body),
+        StmtKind::IfElseStmt {
             condition,
             if_block,
             else_block,
@@ -73,12 +73,12 @@ pub fn walk_stmt<'ast>(visitor: &mut impl Visitor<'ast>, stmt: &'ast Stmt) {
                 visit_stmt_list!(visitor, else_block);
             }
         }
-        Stmt::WhileStmt { condition, body} => {
+        StmtKind::WhileStmt { condition, body} => {
             visitor.visit_expr(condition);
             visit_stmt_list!(visitor, body);
         }
-        Stmt::ExprStmt(expr) => visitor.visit_expr(expr),
-        Stmt::ReturnStmt(expr) => visitor.visit_expr(expr),
-        Stmt::Error => {}
+        StmtKind::ExprStmt(expr) => visitor.visit_expr(expr),
+        StmtKind::ReturnStmt(expr) => visitor.visit_expr(expr),
+        StmtKind::Error => {}
     }
 }

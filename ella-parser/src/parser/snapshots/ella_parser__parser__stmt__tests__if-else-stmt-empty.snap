@@ -2,15 +2,18 @@
 source: ella-parser/src/parser/stmt.rs
 expression: "stmt(r#\"if condition {} else {}\"#)"
 ---
-IfElseStmt {
-    condition: Expr {
-        kind: Identifier(
-            "condition",
+Stmt {
+    kind: IfElseStmt {
+        condition: Expr {
+            kind: Identifier(
+                "condition",
+            ),
+            span: 3..12,
+        },
+        if_block: [],
+        else_block: Some(
+            [],
         ),
-        span: 3..12,
     },
-    if_block: [],
-    else_block: Some(
-        [],
-    ),
+    span: 0..23,
 }

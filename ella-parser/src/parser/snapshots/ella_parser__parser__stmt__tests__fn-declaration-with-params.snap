@@ -2,12 +2,15 @@
 source: ella-parser/src/parser/stmt.rs
 expression: "stmt(\"fn foo(a, b, c) {}\")"
 ---
-FnDeclaration {
-    ident: "foo",
-    params: [
-        "a",
-        "b",
-        "c",
-    ],
-    body: [],
+Stmt {
+    kind: FnDeclaration {
+        ident: "foo",
+        params: [
+            "a",
+            "b",
+            "c",
+        ],
+        body: [],
+    },
+    span: 0..18,
 }

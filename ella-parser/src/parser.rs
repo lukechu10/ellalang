@@ -1,6 +1,6 @@
 //! Parse a [`Source`] into an AST (abstract syntax tree).
 
-use crate::ast::{Expr, ExprKind, Stmt};
+use crate::ast::{Expr, ExprKind, Stmt, StmtKind};
 use crate::lexer::Token;
 use ella_source::{Source, SyntaxError};
 use logos::{Lexer, Logos};
@@ -41,6 +41,8 @@ impl<'a> Parser<'a> {
 impl<'a> Parser<'a> {
     /// Returns an anonymous top level function.
     pub fn parse_program(&mut self) -> Stmt {
+        let lo = self.node_start();
+
         let mut body = Vec::new();
         loop {
             body.push(self.parse_declaration());
@@ -49,16 +51,19 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Stmt::FnDeclaration {
+        StmtKind::FnDeclaration {
             body,
             ident: "<global>".to_string(),
             params: Vec::new(),
         }
+        .with_span(lo..self.node_end())
     }
 
     /// Returns an anonymous top level function.
     /// If the last statement is an [`Stmt::ExprStmt`], it will create a function call to `println()`.
     pub fn parse_repl_input(&mut self) -> Stmt {
+        let lo = self.node_start();
+
         let mut body = Vec::new();
         loop {
             body.push(self.parse_declaration());
@@ -67,7 +72,11 @@ impl<'a> Parser<'a> {
             }
         }
 
-        if let Some(Stmt::ExprStmt(expr)) = body.last_mut() {
+        if let Some(Stmt {
+            kind: StmtKind::ExprStmt(expr),
+            ..
+        }) = body.last_mut()
+        {
             *expr = ExprKind::FnCall {
                 args: vec![expr.clone()],
                 callee: Box::new(ExprKind::Identifier("println".to_string()).with_span(0..0)),
@@ -75,11 +84,11 @@ impl<'a> Parser<'a> {
             .with_span(0..0)
         }
 
-        Stmt::FnDeclaration {
+        StmtKind::FnDeclaration {
             body,
             ident: "<global>".to_string(),
             params: Vec::new(),
-        }
+        }.with_span(lo..self.node_end())
     }
 }
 

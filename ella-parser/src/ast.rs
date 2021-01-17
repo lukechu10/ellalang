@@ -37,14 +37,22 @@ pub enum ExprKind {
 }
 
 impl ExprKind {
+    /// Construct a [`Expr`] with `self` as `kind` and `span`.
     pub fn with_span(self, span: Range<usize>) -> Expr {
         Expr { kind: self, span }
     }
 }
 
+/// Wrapper around [`StmtKind`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct Stmt {
+    pub kind: StmtKind,
+    pub span: Range<usize>,
+}
+
 /// Represents a statement node in the AST.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Stmt {
+pub enum StmtKind {
     /// Variable declaration.
     LetDeclaration { ident: String, initializer: Expr },
     /// Function declaration.
@@ -70,4 +78,11 @@ pub enum Stmt {
     ReturnStmt(Expr),
     /// Error token. Used for error recovery/
     Error,
+}
+
+impl StmtKind {
+    /// Construct a [`Stmt`] with `self` as `kind` and `span`.
+    pub fn with_span(self, span: Range<usize>) -> Stmt {
+        Stmt { kind: self, span }
+    }
 }
