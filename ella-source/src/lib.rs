@@ -2,6 +2,8 @@
 
 use std::{cell::RefCell, fmt, ops::Range};
 
+use console::style;
+
 /// Represents source code.
 pub struct Source<'a> {
     /// Original source code.
@@ -47,6 +49,17 @@ impl<'a> Source<'a> {
                 Ok(line) => (line, 0),
                 Err(line) => (line - 1, pos - self.lines[line - 1]),
             }
+        }
+    }
+
+    /// Gets the slice at `line`.
+    pub fn get_line(&self, line: usize) -> &str {
+        let start = self.lines[line];
+        if line == self.lines.len() - 1 {
+            &self.content[start..]
+        } else {
+            let end = self.lines[line + 1] - 1; // don't get newline character
+            &self.content[start..end]
         }
     }
 }
@@ -116,15 +129,44 @@ impl<'a> fmt::Display for Source<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let errors = self.errors.errors.borrow();
         for error in errors.iter() {
-            let (line, col) = self.lookup_line_col(error.span.start);
+            let start = self.lookup_line_col(error.span.start);
+            let end = self.lookup_line_col(error.span.end);
             writeln!(
                 f,
-                "ERROR: {message} at position {filename}:{line}:{col}",
-                message = error.message,
-                filename = "unknown", // FIXME
-                line = line + 1, // +1 for 1-based line position
-                col = col + 1, // +1 for 1-based column position
+                "{error}{message}\n{filename}",
+                error = style("error").red().bright().bold(),
+                message = style(format!(": {errMessage}", errMessage = error.message,)).bold(),
+                filename = format!(
+                    "   {arrow} {filename}",
+                    arrow = style("-->").cyan().bright().bold(),
+                    filename = format!(
+                        "{filename}:{line}:{col}",
+                        filename = "unknown", // FIXME
+                        line = start.0 + 1,   // +1 for 1-based line position
+                        col = start.1 + 1,    // +1 for 1-based column position
+                    )
+                ),
             )?;
+            if start.0 == end.0 {
+                writeln!(f, "    {}", style("|").cyan().bright().bold())?;
+                write!(
+                    f,
+                    "{line}{}",
+                    style("|").cyan().bright().bold(),
+                    line = style(format!("{:<4}", start.0 + 1)).cyan().bright().bold(),
+                )?;
+                writeln!(f, " {}", self.get_line(start.0))?;
+                write!(f, "    {}", style("|").cyan().bright().bold())?;
+                writeln!(
+                    f,
+                    "{} {} {}",
+                    " ".repeat(start.1),
+                    style("^".repeat(end.1 - start.1)).red().bright().bold(),
+                    style(&error.message).red().bright().bold(),
+                )?;
+            } else {
+                // TODO: multi-line errors
+            }
         }
 
         Ok(())

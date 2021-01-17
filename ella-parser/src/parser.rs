@@ -115,7 +115,7 @@ impl<'a> Parser<'a> {
     fn unexpected(&mut self) {
         self.source
             .errors
-            .add_error(SyntaxError::new("Unexpected token", self.lexer.span()))
+            .add_error(SyntaxError::new("unexpected token", self.lexer.span()))
     }
 
     /// Returns the start of the current token.

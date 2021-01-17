@@ -223,7 +223,7 @@ impl<'a> Resolver<'a> {
             }
         }
         self.source.errors.add_error(SyntaxError::new(
-            format!("Cannot resolve symbol {}", ident),
+            format!("cannot resolve symbol {}", ident),
             span,
         ));
         None
