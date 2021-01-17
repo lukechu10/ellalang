@@ -118,14 +118,16 @@ impl<'a> Parser<'a> {
     fn expect(&mut self, tok: Token) {
         if !self.eat(tok.clone()) {
             if tok == Token::Semi {
-                self.next();
+                // do not skip over next token because semicolons is a sync point
                 self.source.errors.add_error(
                     SyntaxError::new("expected a `;` character", self.current_span.clone())
                         .with_help("consider adding a `;` character"),
                 )
             } else {
-                self.next();
-                self.unexpected()
+                while !self.eat(tok.clone()) && !self.current_token.is_sync_point() {
+                    self.next();
+                    self.unexpected()
+                }
             }
         }
     }
