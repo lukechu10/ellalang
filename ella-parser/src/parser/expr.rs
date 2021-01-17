@@ -36,6 +36,12 @@ impl<'a> Parser<'a> {
                 }
                 .with_span(lo..self.node_end())
             }
+            Token::OpenParen => {
+                self.next();
+                let expr = self.parse_expr();
+                self.expect(Token::CloseParen);
+                expr
+            }
             _ => {
                 let lo = self.node_start();
                 self.next();
@@ -82,7 +88,8 @@ impl<'a> Parser<'a> {
                         lhs = ExprKind::FnCall {
                             callee: Box::new(lhs),
                             args,
-                        }.with_span(lo..self.node_end());
+                        }
+                        .with_span(lo..self.node_end());
                     }
                     _ => unreachable!(),
                 }
@@ -111,7 +118,8 @@ impl<'a> Parser<'a> {
                 lhs: Box::new(lhs),
                 op: binop,
                 rhs: Box::new(rhs),
-            }.with_span(lo..hi)
+            }
+            .with_span(lo..hi)
         }
 
         lhs
@@ -187,6 +195,7 @@ mod tests {
         assert_debug_snapshot!("binary-equality", expr("1 == 2 - 1"));
         assert_debug_snapshot!("binary-associativity", expr("2 * 2 * 2")); // should be (2 * 2) * 2
         assert_debug_snapshot!("binary-associativity-2", expr("a = b = c")); // should be a = (b = c)
+        assert_debug_snapshot!("binary-paren", expr("(a + b) * c")); // should be (a + b) * c
     }
 
     #[test]
