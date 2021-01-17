@@ -133,7 +133,7 @@ impl<'a> Parser<'a> {
     fn unexpected(&mut self) {
         self.source.errors.add_error(SyntaxError::new(
             "unexpected token",
-            self.current_span.clone(),
+            self.previous_span.clone(),
         ))
     }
 

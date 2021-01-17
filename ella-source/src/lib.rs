@@ -149,19 +149,24 @@ impl<'a> fmt::Display for Source<'a> {
                 ),
             )?;
             if start.0 == end.0 {
+                let is_0_width = start.1 == end.1;
+                let line = if is_0_width { start.0 - 1 } else { start.0 };
+
                 writeln!(f, "    {}", style("|").cyan().bright().bold())?;
+
                 write!(
                     f,
-                    "{line}{}",
+                    "{line_content}{}",
                     style("|").cyan().bright().bold(),
-                    line = style(format!("{:<4}", start.0 + 1)).cyan().bright().bold(),
+                    line_content = style(format!("{:<4}", line + 1)).cyan().bright().bold(),
                 )?;
-                writeln!(f, " {}", self.get_line(start.0))?;
+                writeln!(f, " {}", self.get_line(line))?;
+
                 write!(f, "    {}", style("|").cyan().bright().bold())?;
                 writeln!(
                     f,
                     "{} {} {}",
-                    " ".repeat(start.1),
+                    " ".repeat(if is_0_width { start.1 + 1 } else { start.1 }),
                     style("^".repeat(usize::max(end.1 - start.1, 1))) // at least 1 `^` character (e.g. for missing tokens)
                         .red()
                         .bright()
