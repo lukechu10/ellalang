@@ -129,4 +129,18 @@ impl Token {
             _ => None,
         }
     }
+
+    /// Returns `true` if the token is synchronization point for error recovery.
+    pub fn is_sync_point(&self) -> bool {
+        match self {
+            Token::Semi
+            | Token::OpenBrace
+            | Token::CloseBrace
+            | Token::OpenParen
+            | Token::CloseParen
+            | Token::Error
+            | Token::Eof => true,
+            _ => false,
+        }
+    }
 }

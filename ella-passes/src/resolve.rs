@@ -222,9 +222,9 @@ impl<'a> Resolver<'a> {
             }
         }
         self.source.errors.add_error(SyntaxError::new(
-            format!("cannot resolve symbol {}", ident),
+            format!("cannot resolve symbol \"{}\"", ident),
             span,
-        ));
+        ).with_help(format!("make sure symbol \"{}\" is in scope", ident)));
         None
     }
 

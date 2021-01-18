@@ -88,7 +88,8 @@ impl<'a> Parser<'a> {
             body,
             ident: "<global>".to_string(),
             params: Vec::new(),
-        }.with_span(lo..self.node_end())
+        }
+        .with_span(lo..self.node_end())
     }
 }
 
@@ -117,14 +118,16 @@ impl<'a> Parser<'a> {
     fn expect(&mut self, tok: Token) {
         if !self.eat(tok.clone()) {
             if tok == Token::Semi {
-                self.next();
-                self.source.errors.add_error(SyntaxError::new(
-                    "expected a `;` character",
-                    self.current_span.clone(),
-                ))
+                // do not skip over next token because semicolons is a sync point
+                self.source.errors.add_error(
+                    SyntaxError::new("expected a `;` character", self.current_span.clone())
+                        .with_help("consider adding a `;` character"),
+                )
             } else {
-                self.next();
-                self.unexpected()
+                while !self.eat(tok.clone()) && !self.current_token.is_sync_point() {
+                    self.next();
+                    self.unexpected()
+                }
             }
         }
     }
@@ -133,7 +136,7 @@ impl<'a> Parser<'a> {
     fn unexpected(&mut self) {
         self.source.errors.add_error(SyntaxError::new(
             "unexpected token",
-            self.current_span.clone(),
+            self.previous_span.clone(),
         ))
     }
 
