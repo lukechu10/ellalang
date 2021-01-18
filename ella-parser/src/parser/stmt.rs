@@ -177,7 +177,6 @@ impl<'a> Parser<'a> {
         }
 
         self.expect(Token::OpenBrace);
-
         let mut body = Vec::new();
         if !self.eat(Token::CloseBrace) {
             loop {

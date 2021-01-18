@@ -236,6 +236,52 @@ mod functions {
             );
         }
     }
+
+    mod lambda_expr {
+        use super::*;
+
+        #[test]
+        fn basic_lambda() {
+            interpret(
+                r#"
+                let f = fn() { return 2; };
+                assert_eq(f(), 2);"#,
+            );
+        }
+
+        #[test]
+        fn basic_lambda_with_param() {
+            interpret(
+                r#"
+                let square = fn(x) { return x * x; };
+                assert_eq(square(10), 100);"#,
+            );
+        }
+
+        #[test]
+        fn lambda_closure() {
+            interpret(
+                r#"
+                fn create_closure(x) {
+                    return fn() { return x * x; };
+                }
+                let f = create_closure(10);
+                assert_eq(f(), 100);"#,
+            );
+        }
+
+        /// IIFE: Immediately invoked function expression
+        #[test]
+        #[should_panic]
+        fn lambda_iife() {
+            interpret(
+                r#"
+                (fn() {
+                    assert(false); // should be called and panic
+                })();"#,
+            );
+        }
+    }
 }
 
 mod control_flow {

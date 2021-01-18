@@ -42,6 +42,9 @@ impl<'a> Parser<'a> {
                 self.expect(Token::CloseParen);
                 expr
             }
+            Token::Fn => {
+                self.parse_lambda_expr()
+            }
             _ => {
                 let lo = self.node_start();
                 self.next();
@@ -166,6 +169,56 @@ impl<'a> Parser<'a> {
 
         ExprKind::Identifier(ident).with_span(lo..self.node_end())
     }
+
+    /* Expressions.Lambda */
+    /// Parses a lambda expression.
+    fn parse_lambda_expr(&mut self) -> Expr {
+        let lo = self.node_start();
+
+        self.expect(Token::Fn);
+
+        self.expect(Token::OpenParen);
+        let mut params = Vec::new();
+        if !self.eat(Token::CloseParen) {
+            loop {
+                params.push(if let Token::Identifier(ref ident) = self.current_token {
+                    let ident = ident.clone();
+                    self.next();
+                    ident
+                } else {
+                    self.unexpected();
+                    return ExprKind::Error.with_span(lo..self.node_end());
+                });
+
+                if self.eat(Token::CloseParen) {
+                    break;
+                } else if !self.eat(Token::Comma) {
+                    self.unexpected();
+                    break;
+                }
+            }
+        }
+
+        self.expect(Token::OpenBrace);
+        let mut body = Vec::new();
+        if !self.eat(Token::CloseBrace) {
+            loop {
+                body.push(self.parse_declaration());
+
+                if self.eat(Token::CloseBrace) {
+                    break;
+                }
+            }
+        }
+
+        let hi = self.node_end();
+        ExprKind::Lambda {
+            inner_stmt: Box::new(StmtKind::Lambda.with_span(lo..hi)),
+            params,
+            body,
+        }
+        .with_span(lo..hi)
+    }
 }
 
 #[cfg(test)]
@@ -210,5 +263,11 @@ mod tests {
         assert_debug_snapshot!("fn-call-with-nested-args", expr("foo(1, bar, baz())"));
         assert_debug_snapshot!("fn-call-chained", expr("foo(1, 2)(3)(4)"));
         assert_debug_snapshot!("fn-call-fib", expr("fib(x - 1) + fib(x - 2)"));
+    }
+
+    #[test]
+    fn test_lambda() {
+        assert_debug_snapshot!("lambda", expr("fn () {}"));
+        assert_debug_snapshot!("lambda-with-params", expr("fn (x) {}"));
     }
 }
