@@ -269,6 +269,18 @@ mod functions {
                 assert_eq(f(), 100);"#,
             );
         }
+
+        /// IIFE: Immediately invoked function expression
+        #[test]
+        #[should_panic]
+        fn lambda_iife() {
+            interpret(
+                r#"
+                (fn() {
+                    assert(false); // should be called and panic
+                })();"#,
+            );
+        }
     }
 }
 
