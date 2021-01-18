@@ -6,6 +6,7 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use ella_parser::ast::{Expr, ExprKind, Stmt, StmtKind};
+use ella_parser::lexer::Token;
 use ella_parser::visitor::{walk_expr, Visitor};
 use ella_source::{Source, SyntaxError};
 use ella_value::BuiltinVars;
@@ -221,10 +222,10 @@ impl<'a> Resolver<'a> {
                 }
             }
         }
-        self.source.errors.add_error(SyntaxError::new(
-            format!("cannot resolve symbol \"{}\"", ident),
-            span,
-        ).with_help(format!("make sure symbol \"{}\" is in scope", ident)));
+        self.source.errors.add_error(
+            SyntaxError::new(format!("cannot resolve symbol \"{}\"", ident), span)
+                .with_help(format!("make sure symbol \"{}\" is in scope", ident)),
+        );
         None
     }
 
@@ -269,6 +270,20 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                         },
                     );
                 }
+            }
+            ExprKind::Binary {
+                lhs,
+                op: Token::Equals,
+                rhs: _,
+            } => {
+                // make sure lhs is an identifier
+                match &lhs.kind {
+                    ExprKind::Identifier(_ident) => {}
+                    _ => self.source.errors.add_error(
+                        SyntaxError::new("invalid left-hand side of assignment", lhs.span.clone())
+                            .with_help("left-hand side of an assignment must be an identifier"),
+                    ),
+                };
             }
             _ => {}
         }
