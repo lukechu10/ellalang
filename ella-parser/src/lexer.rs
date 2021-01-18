@@ -137,7 +137,9 @@ impl Token {
             | Token::OpenBrace
             | Token::CloseBrace
             | Token::OpenParen
-            | Token::CloseParen => true,
+            | Token::CloseParen
+            | Token::Error
+            | Token::Eof => true,
             _ => false,
         }
     }
