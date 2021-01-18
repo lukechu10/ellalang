@@ -31,7 +31,7 @@ impl<'a> ResolveResult<'a> {
     }
 }
 
-/// Represents a symbol (created using `let` or `fn` declaration statement).
+/// Represents a symbol (created using `let`, `fn` declaration statement or lambda expression).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Symbol {
     ident: String,
@@ -251,7 +251,11 @@ impl<'a> Resolver<'a> {
 
 impl<'a> Visitor<'a> for Resolver<'a> {
     fn visit_expr(&mut self, expr: &'a Expr) {
-        walk_expr(self, expr);
+        if let ExprKind::Lambda { .. } = &expr.kind {
+            // custom walking logic for lambda
+        } else {
+            walk_expr(self, expr);
+        }
 
         match &expr.kind {
             ExprKind::Identifier(ident) => {
@@ -284,6 +288,44 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                             .with_help("left-hand side of an assignment must be an identifier"),
                     ),
                 };
+            }
+            ExprKind::Lambda {
+                inner_stmt,
+                params,
+                body,
+            } => {
+                let ident = "lambda".to_string();
+                let old_func_offset = self.current_func_offset;
+
+                self.current_func_offset = self.accessible_symbols.len() as i32;
+                self.function_upvalues.push(Vec::new());
+                self.function_scope_depths
+                    .push(*self.function_scope_depths.last().unwrap());
+
+                self.enter_scope();
+                // add arguments
+                for param in params {
+                    self.add_symbol(param.clone(), Some(inner_stmt));
+                }
+
+                for stmt in body {
+                    self.visit_stmt(stmt);
+                }
+                self.exit_scope();
+
+                // patch self.symbol_table with upvalues
+                self.function_scope_depths.pop();
+                self.symbol_table.insert(
+                    inner_stmt.as_ref() as *const Stmt,
+                    Rc::new(RefCell::new(Symbol {
+                        ident,
+                        is_captured: false,
+                        scope_depth: *self.function_scope_depths.last().unwrap(),
+                        upvalues: self.function_upvalues.pop().unwrap(),
+                    })),
+                );
+
+                self.current_func_offset = old_func_offset;
             }
             _ => {}
         }
@@ -368,6 +410,7 @@ impl<'a> Visitor<'a> for Resolver<'a> {
             }
             StmtKind::ExprStmt(expr) => self.visit_expr(expr),
             StmtKind::ReturnStmt(expr) => self.visit_expr(expr),
+            StmtKind::Lambda => unreachable!(),
             StmtKind::Error => {}
         }
     }
