@@ -309,6 +309,45 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     _ => unreachable!(),
                 };
             }
+            ExprKind::Lambda {
+                inner_stmt,
+                params,
+                body,
+            } => {
+                let ident = "lambda".to_string();
+                let arity = params.len() as u32;
+
+                // Create a new `Codegen` instance, codegen the function, and add the chunk to the `ObjKind::Fn`.
+                let fn_chunk = {
+                    let mut cg = Codegen::new(ident.clone(), self.resolve_result, self.source);
+                    for stmt in body {
+                        cg.visit_stmt(stmt);
+                    }
+                    if DUMP_CHUNK {
+                        eprintln!("{}", cg.chunk);
+                    }
+                    cg.chunk
+                };
+
+                let symbol = self.resolve_result.lookup_declaration(inner_stmt).unwrap();
+
+                let func = Rc::new(Obj {
+                    kind: ObjKind::Fn(Function {
+                        ident,
+                        arity,
+                        chunk: fn_chunk,
+                        upvalues_count: symbol.borrow().upvalues.len(),
+                    }),
+                });
+                let constant = self.chunk.add_constant(Value::Object(func));
+                self.chunk.write_chunk(OpCode::Closure, line);
+                self.chunk.write_chunk(constant, line);
+
+                for symbol in &symbol.borrow().upvalues {
+                    self.chunk.write_chunk(symbol.is_local as u8, line);
+                    self.chunk.write_chunk(symbol.index as u8, line);
+                }
+            }
             ExprKind::Error => unreachable!(),
         }
     }
@@ -442,6 +481,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     self.chunk.write_chunk(OpCode::Ret, line);
                 }
             }
+            StmtKind::Lambda => unreachable!(),
             StmtKind::Error => unreachable!(),
         }
     }

@@ -1,0 +1,17 @@
+---
+source: ella-parser/src/parser/expr.rs
+expression: "expr(\"fn (x) {}\")"
+---
+Expr {
+    kind: Lambda {
+        inner_stmt: Stmt {
+            kind: Lambda,
+            span: 0..9,
+        },
+        params: [
+            "x",
+        ],
+        body: [],
+    },
+    span: 0..9,
+}

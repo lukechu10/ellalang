@@ -36,6 +36,15 @@ pub fn walk_expr<'ast>(visitor: &mut impl Visitor<'ast>, expr: &'ast Expr) {
             visitor.visit_expr(rhs);
         }
         ExprKind::Unary { op: _, arg } => visitor.visit_expr(arg),
+        ExprKind::Lambda {
+            inner_stmt: _,
+            params: _,
+            body,
+        } => {
+            for stmt in body {
+                visitor.visit_stmt(stmt);
+            }
+        }
         ExprKind::Error => {}
     }
 }
@@ -73,12 +82,13 @@ pub fn walk_stmt<'ast>(visitor: &mut impl Visitor<'ast>, stmt: &'ast Stmt) {
                 visit_stmt_list!(visitor, else_block);
             }
         }
-        StmtKind::WhileStmt { condition, body} => {
+        StmtKind::WhileStmt { condition, body } => {
             visitor.visit_expr(condition);
             visit_stmt_list!(visitor, body);
         }
         StmtKind::ExprStmt(expr) => visitor.visit_expr(expr),
         StmtKind::ReturnStmt(expr) => visitor.visit_expr(expr),
+        StmtKind::Lambda => unreachable!(),
         StmtKind::Error => {}
     }
 }

@@ -32,6 +32,13 @@ pub enum ExprKind {
     },
     /// An unary expression (e.g. `-1`).
     Unary { op: Token, arg: Box<Expr> },
+    /// A lambda expression.
+    Lambda {
+        /// Should always be a [`StmtKind::Lambda`]. Note that this field is only a marker and does not store any data.
+        inner_stmt: Box<Stmt>,
+        params: Vec<String>,
+        body: Vec<Stmt>,
+    },
     /// Error token. Used for error recovery.
     Error,
 }
@@ -76,8 +83,11 @@ pub enum StmtKind {
     ExprStmt(Expr),
     /// Return statement.
     ReturnStmt(Expr),
-    /// Error token. Used for error recovery/
+    /// Error token. Used for error recovery.
     Error,
+    /// A lambda "statement". There are no fields as this is only a marker, stored inside [`ExprKind::Lambda`] for variable resolution.
+    /// This should never be visited in a [`Visitor`].
+    Lambda,
 }
 
 impl StmtKind {
