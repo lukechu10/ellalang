@@ -29,7 +29,7 @@ impl<'a> Parser<'a> {
     pub fn new(source: &'a Source<'a>) -> Self {
         let mut lexer = Token::lexer(source.content);
         Self {
-            current_token: lexer.next().unwrap(),
+            current_token: lexer.next().unwrap_or(Token::Eof),
             previous_span: 0..0,
             current_span: lexer.span(),
             lexer,
