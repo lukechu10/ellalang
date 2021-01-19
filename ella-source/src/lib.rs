@@ -158,7 +158,11 @@ impl<'a> fmt::Display for Source<'a> {
             )?;
             if start.0 == end.0 {
                 let is_0_width = start.1 == end.1;
-                let line = if is_0_width { start.0 - 1 } else { start.0 };
+                let line = if is_0_width {
+                    start.0.max(1) - 1 // .max(1) to prevent overflow
+                } else {
+                    start.0
+                };
 
                 writeln!(f, "    {}", style("|").cyan().bright().bold())?;
 
