@@ -2,6 +2,8 @@
 
 Welcome to Ella lang! Ella lang is a computer programming language implemented in Rust.
 
+Checkout the interactive online playground [here](https://lukechu10.github.io/ellalang-playground/).
+
 ## Language features
 
 ### Basics
@@ -116,6 +118,13 @@ let func = compose(add_one, double); // func adds one and than doubles the resul
 func(3); // evaluates to (3 + 1) * 2 = 8
 ```
 
+Functions can also be expressed using lambda syntax. Example:
+```
+let f = fn() { return 2; }
+f(); // evaluates to 2
+```
+Lambda allows inline function creation and thus improves ergonomics.
+
 ### Control flow
 
 Ella supports structured control flow via `if`/`else` and `while` (`for` is still being implemented).
@@ -138,17 +147,17 @@ while condition {
 ```
 If `condition` is false since the very beginning, the loop will never execute.
 
-### Builtin functions
+### Built-in functions
 
-Ella includes some builtin functions that are defined in Rust:
+Ella includes some built-in functions that are defined in Rust:
 
-* `print(x)` - Prints a value `x` to the console.
+* `print(x)` - Prints a value `x` to the console. *Not available in playground*.
 * `println(x)` - Prints a value `x` to the console followed by a new line (`\n` character).
-* `readln()` - Reads a new line from stdin and returns a string.
-* `assert(value)` - Asserts a certain condition is `true`. Uses Rust's `assert!` macro under the hood and will panic if fail.
-* `assert_eq(value)` - Asserts two values are equal. Uses Rust's `assert_eq!` macro under the hood and will panic if fail.
-* `is_nan(num)` - Returns `true` if the number is `NaN`. Returns `false` otherwise. Note that this is the only way to check if a number is `NaN`.
-* `parse_number(str)` - Parses a string into a floating point number or `NaN` if invalid.
+* `readln()` - Reads a new line from stdin and returns a string. *Not available in playground*.
+* `assert(value)` - Asserts a certain condition is `true`. Uses Rust's `assert!` macro under the hood and will panic if fail. *Not available in playground*.
+* `assert_eq(value)` - Asserts two values are equal. Uses Rust's `assert_eq!` macro under the hood and will panic if fail. *Not available in playground*.
+* `is_nan(num)` - Returns `true` if the number is `NaN`. Returns `false` otherwise. Note that this is the only way to check if a number is `NaN`. *Not available in playground*.
+* `parse_number(str)` - Parses a string into a floating point number or `NaN` if invalid. *Not available in playground*.
 * `clock()` - Returns a floating point number representing the number of seconds since the Unix epoch. Useful for simple benchmarks.
 
 This list of features is non exhaustive. More features are currently being implemented. Thanks for checking out this project!
