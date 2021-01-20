@@ -449,9 +449,11 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 let exit_jump = self.emit_jump(OpCode::JmpIfFalse, line);
                 self.chunk.write_chunk(OpCode::Pop, line);
 
+                self.enter_scope();
                 for stmt in body {
                     self.visit_stmt(stmt);
                 }
+                self.exit_scope();
 
                 self.emit_loop(OpCode::Loop, loop_start, line);
 
