@@ -81,15 +81,15 @@ impl<'a> Codegen<'a> {
         self.scope_stack.last_mut().unwrap().push(Rc::clone(symbol));
     }
 
-    fn exit_scope(&mut self) {
+    fn exit_scope(&mut self, line: usize) {
         let scope = self.scope_stack.pop().unwrap();
         for symbol in scope {
             match symbol.borrow().is_captured {
                 true => {
-                    self.chunk.write_chunk(OpCode::CloseUpVal, 0);
+                    self.chunk.write_chunk(OpCode::CloseUpVal, line);
                 }
                 false => {
-                    self.chunk.write_chunk(OpCode::Pop, 0);
+                    self.chunk.write_chunk(OpCode::Pop, line);
                     self.chunk
                         .add_debug_annotation_at_last(format!("cleanup local variable"));
                 }
@@ -405,7 +405,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 for stmt in body {
                     self.visit_stmt(stmt);
                 }
-                self.exit_scope();
+                self.exit_scope(line);
             }
             StmtKind::IfElseStmt {
                 condition,
@@ -422,7 +422,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 for stmt in if_block {
                     self.visit_stmt(stmt);
                 }
-                self.exit_scope();
+                self.exit_scope(line);
 
                 if let Some(else_block) = else_block {
                     let else_jump = self.emit_jump(OpCode::Jmp, line);
@@ -434,7 +434,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     for stmt in else_block {
                         self.visit_stmt(stmt);
                     }
-                    self.exit_scope();
+                    self.exit_scope(line);
 
                     self.chunk.patch_jump(else_jump);
                 } else {
@@ -453,7 +453,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 for stmt in body {
                     self.visit_stmt(stmt);
                 }
-                self.exit_scope();
+                self.exit_scope(line);
 
                 self.emit_loop(OpCode::Loop, loop_start, line);
 
