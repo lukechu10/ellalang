@@ -439,7 +439,6 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     self.chunk.patch_jump(else_jump);
                 } else {
                     self.chunk.patch_jump(then_jump);
-                    self.chunk.write_chunk(OpCode::Pop, line);
                 }
             }
             StmtKind::WhileStmt { condition, body } => {

@@ -44,11 +44,8 @@ impl<'a> Parser<'a> {
         let lo = self.node_start();
 
         let mut body = Vec::new();
-        loop {
+        while !matches!(self.current_token, Token::Eof | Token::Error) {
             body.push(self.parse_declaration());
-            if self.current_token == Token::Eof {
-                break;
-            }
         }
 
         StmtKind::FnDeclaration {
@@ -65,11 +62,8 @@ impl<'a> Parser<'a> {
         let lo = self.node_start();
 
         let mut body = Vec::new();
-        loop {
+        while !matches!(self.current_token, Token::Eof | Token::Error) {
             body.push(self.parse_declaration());
-            if matches!(self.current_token, Token::Eof | Token::Error) {
-                break;
-            }
         }
 
         if let Some(Stmt {
