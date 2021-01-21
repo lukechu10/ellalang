@@ -1,6 +1,11 @@
 use ella::interpret;
 
 #[test]
+fn empty_program() {
+    interpret("");
+}
+
+#[test]
 #[should_panic]
 fn smoke_assert() {
     interpret(
