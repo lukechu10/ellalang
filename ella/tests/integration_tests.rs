@@ -24,17 +24,92 @@ fn smoke_assert_eq() {
 }
 
 #[test]
-fn variables() {
+#[should_panic]
+fn no_top_level_return() {
     interpret(
         r#"
-        let x = 1;
-        assert_eq(x, 1);
-        let y = x + 1;
-        assert_eq(y, 2);
-        assert_eq(y, x + 1);
-        x = 10;
-        assert_eq(x, 10);"#,
+return 0;"#,
     );
+}
+
+#[test]
+#[should_panic]
+fn no_bad_arity() {
+    interpret(
+        r#"
+fn foo(x) {}
+foo(1, 2);"#,
+    );
+}
+
+#[test]
+#[should_panic]
+fn no_bad_arity_native() {
+    interpret(
+        r#"
+assert_eq(true, true, true);"#,
+    );
+}
+
+#[test]
+#[should_panic]
+fn no_top_level_return_2() {
+    interpret(
+        r#"
+return "a string";"#,
+    );
+}
+
+#[test]
+#[should_panic]
+fn no_not_function() {
+    interpret(
+        r#"
+let not_a_function = true;
+not_a_function();"#,
+    );
+}
+
+mod variables {
+    use super::*;
+
+    #[test]
+    fn variables() {
+        interpret(
+            r#"
+let x = 1;
+assert_eq(x, 1);
+let y = x + 1;
+assert_eq(y, 2);
+assert_eq(y, x + 1);
+x = 10;
+assert_eq(x, 10);"#,
+        );
+    }
+
+    #[test]
+    fn local_variables() {
+        interpret(
+            r#"
+{
+    let local = 10;
+    local = 20;
+    assert_eq(local, 20);
+}"#,
+        );
+    }
+    
+    #[test]
+    #[should_panic]
+    fn do_not_leak_local_from_scope() {
+        interpret(
+            r#"
+{
+    let local = 10;
+}
+local; // not in scope"#,
+        );
+    }
 }
 
 #[test]
@@ -74,6 +149,27 @@ fn op_assign() {
         assert_eq(x /= 4, 1);
         assert_eq(x, 1);"#,
     );
+}
+
+mod strings {
+    use super::*;
+
+    #[test]
+    fn string_literals() {
+        interpret(
+            r#"
+let str = "Hello";
+assert_eq(str, "Hello");"#,
+        );
+    }
+
+    #[test]
+    fn string_concatenation() {
+        interpret(
+            r#"
+assert_eq("Hello " + "world!", "Hello world!");"#,
+        );
+    }
 }
 
 mod functions {
@@ -291,6 +387,23 @@ mod functions {
 
 mod control_flow {
     use super::*;
+
+    #[test]
+    fn r#if() {
+        interpret(r#"
+let x = 0;
+let condition = true;
+if condition {
+    x = 1;
+}
+assert_eq(x, 1);
+
+condition = false;
+if condition {
+    x = 2;
+}
+assert_eq(x, 1);"#);
+    }
 
     #[test]
     fn if_and_else() {

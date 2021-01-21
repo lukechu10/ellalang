@@ -6,7 +6,7 @@ use num_traits::FromPrimitive;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-const INSPECT_VM_STACK: bool = false;
+const INSPECT_VM_STACK: bool = true;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InterpretResult {
