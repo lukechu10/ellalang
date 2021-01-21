@@ -98,7 +98,7 @@ assert_eq(x, 10);"#,
 }"#,
         );
     }
-    
+
     #[test]
     #[should_panic]
     fn do_not_leak_local_from_scope() {
@@ -109,6 +109,15 @@ assert_eq(x, 10);"#,
 }
 local; // not in scope"#,
         );
+    }
+
+    #[test]
+    fn assign_equality_result() {
+        interpret(r#"
+let x = 1;
+let y = 2;
+let is_eq = x == 2;
+assert(!is_eq);"#);
     }
 }
 
@@ -169,6 +178,12 @@ assert_eq(str, "Hello");"#,
             r#"
 assert_eq("Hello " + "world!", "Hello world!");"#,
         );
+    }
+
+    #[test]
+    #[should_panic]
+    fn no_implicit_cast() {
+        interpret(r#""a" + 1;"#);
     }
 }
 
@@ -390,7 +405,8 @@ mod control_flow {
 
     #[test]
     fn r#if() {
-        interpret(r#"
+        interpret(
+            r#"
 let x = 0;
 let condition = true;
 if condition {
@@ -402,7 +418,8 @@ condition = false;
 if condition {
     x = 2;
 }
-assert_eq(x, 1);"#);
+assert_eq(x, 1);"#,
+        );
     }
 
     #[test]
