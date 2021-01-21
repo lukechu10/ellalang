@@ -18,6 +18,7 @@ pub fn default_builtin_vars() -> BuiltinVars {
     builtin_vars.add_native_fn("is_nan", &is_nan, 1);
     builtin_vars.add_native_fn("parse_number", &parse_number, 1);
     builtin_vars.add_native_fn("clock", &clock, 0);
+    builtin_vars.add_native_fn("str", &str, 1);
     builtin_vars
 }
 
@@ -88,4 +89,9 @@ pub fn clock(_args: &mut [Value]) -> Value {
         .expect("Time went backwards")
         .as_secs_f64();
     Value::Number(since_the_epoch_secs)
+}
+
+pub fn str(args: &mut [Value]) -> Value {
+    let arg = &args[0];
+    Value::Object(Rc::new(Obj::new_string(format!("{}", arg))))
 }
