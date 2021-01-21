@@ -156,8 +156,9 @@ Ella includes some built-in functions that are defined in Rust:
 * `readln()` - Reads a new line from stdin and returns a string. *Not available in playground*.
 * `assert(value)` - Asserts a certain condition is `true`. Uses Rust's `assert!` macro under the hood and will panic if fail. *Not available in playground*.
 * `assert_eq(value)` - Asserts two values are equal. Uses Rust's `assert_eq!` macro under the hood and will panic if fail. *Not available in playground*.
-* `is_nan(num)` - Returns `true` if the number is `NaN`. Returns `false` otherwise. Note that this is the only way to check if a number is `NaN`. *Not available in playground*.
-* `parse_number(str)` - Parses a string into a floating point number or `NaN` if invalid. *Not available in playground*.
+* `is_nan(num)` - Returns `true` if the number is `NaN`. Returns `false` otherwise. Note that this is the only way to check if a number is `NaN`.
+* `parse_number(str)` - Parses a string into a floating point number or `NaN` if invalid.
 * `clock()` - Returns a floating point number representing the number of seconds since the Unix epoch. Useful for simple benchmarks.
+* `str(value` - Converts any value into a string.
 
 This list of features is non exhaustive. More features are currently being implemented. Thanks for checking out this project!
