@@ -49,7 +49,7 @@ fn repl() {
 
             let chunk = codegen.into_inner_chunk();
 
-            let initial_stack = vm.stack().clone();
+            let initial_stack = vm.vm_state().clone();
             let interpret_result = vm.interpret(chunk);
             match &interpret_result {
                 InterpretResult::Ok => {
@@ -59,7 +59,7 @@ fn repl() {
                 InterpretResult::RuntimeError { .. } => {
                     eprintln!("{:?}", interpret_result);
                     // Restore vm stack to previous state to recover from error.
-                    vm.restore_stack(initial_stack);
+                    vm.restore_vm_state(initial_stack);
                 }
             }
         }

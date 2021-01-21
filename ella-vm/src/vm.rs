@@ -466,20 +466,20 @@ impl<'a> Vm<'a> {
             func,
             upvalues: Rc::new(RefCell::new(Vec::new())),
         };
-        self.call_stack.push(CallFrame {
+        self.call_stack = vec![CallFrame {
             ip: 0,            // start interpreting at first opcode
             frame_pointer: 0, // global frame_pointer points to start of stack
             closure: Rc::new(closure),
-        });
+        }];
 
         self.run()
     }
 
-    pub fn stack(&self) -> &ValueArray {
+    pub fn vm_state(&self) -> &ValueArray {
         &self.stack
     }
 
-    pub fn restore_stack(&mut self, stack: ValueArray) {
+    pub fn restore_vm_state(&mut self, stack: ValueArray) {
         self.stack = stack;
     }
 }
