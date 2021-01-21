@@ -6,7 +6,7 @@ use num_traits::FromPrimitive;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-const INSPECT_VM_STACK: bool = true;
+const INSPECT_VM_STACK: bool = false;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InterpretResult {
@@ -48,6 +48,63 @@ impl<'a> Vm<'a> {
         self.call_stack.last().unwrap().ip
     }
 
+    fn frame(&self) -> &CallFrame {
+        self.call_stack.last().unwrap()
+    }
+
+    fn read_u8(&mut self) -> u8 {
+        let byte: u8 = self.code()[self.ip()];
+        *self.ip_mut() += 1;
+        byte
+    }
+
+    fn read_u16(&mut self) -> u16 {
+        let short: u16 = (self.code()[self.ip()] as u16) << 8 | self.code()[self.ip() + 1] as u16;
+        *self.ip_mut() += 2;
+        short
+    }
+
+    fn read_f64(&mut self) -> f64 {
+        let mut bytes: [u8; 8] = [0; 8];
+        bytes.copy_from_slice(&self.code()[self.ip()..self.ip() + 8]);
+
+        let value = f64::from_le_bytes(bytes);
+        *self.ip_mut() += 8;
+        value
+    }
+
+    fn read_constant(&mut self) -> Value {
+        let constant: Value = self.chunk().constants[self.code()[self.ip()] as usize].clone();
+        *self.ip_mut() += 1;
+        constant
+    }
+
+    fn cleanup_function(&mut self) {
+        let return_value = self.stack.pop().unwrap();
+        let frame = self.call_stack.pop().unwrap(); // remove a `CallFrame` from the call stack.
+
+        for i in frame.frame_pointer..self.stack.len() {
+            self.close_upvalues(i);
+        }
+        // cleanup local variables created in function
+        self.stack.truncate(frame.frame_pointer);
+
+        self.stack.push(return_value);
+    }
+
+    /// If inside a function, cleans up and returns `true`. Else returns `false` and does nothing.
+    fn try_implicit_ret(&mut self) -> bool {
+        if self.call_stack.len() > 1 {
+            // inside a function
+            self.stack.push(Value::Number(0.0)); // FIXME: returns 0.0 by default
+            self.cleanup_function();
+            true
+        } else {
+            self.call_stack.pop().unwrap();
+            false
+        }
+    }
+
     fn resolve_upvalue_into_value(&self, upvalue: &UpValue) -> Value {
         match upvalue {
             UpValue::Open(index) => self.stack[*index].clone(),
@@ -65,6 +122,7 @@ impl<'a> Vm<'a> {
         }
     }
 
+    /// Uses the last value on the stack as the return value and cleans up the local variables created inside the function.
     fn close_upvalues(&mut self, index: usize) {
         let value = self.stack[index].clone();
         for upvalue in &self.upvalues {
@@ -91,49 +149,6 @@ impl<'a> Vm<'a> {
     }
 
     fn run(&mut self) -> InterpretResult {
-        macro_rules! read_u8 {
-            () => {{
-                let byte: u8 = self.code()[self.ip()];
-                *self.ip_mut() += 1;
-                byte
-            }};
-        }
-
-        macro_rules! read_u16 {
-            () => {{
-                let short: u16 =
-                    (self.code()[self.ip()] as u16) << 8 | self.code()[self.ip() + 1] as u16;
-                *self.ip_mut() += 2;
-                short
-            }};
-        }
-
-        macro_rules! read_f64 {
-            () => {{
-                let mut bytes: [u8; 8] = [0; 8];
-                bytes.copy_from_slice(&self.code()[self.ip()..self.ip() + 8]);
-
-                let value = f64::from_le_bytes(bytes);
-                *self.ip_mut() += 8;
-                value
-            }};
-        }
-
-        macro_rules! read_constant {
-            () => {{
-                let constant: Value =
-                    self.chunk().constants[self.code()[self.ip()] as usize].clone();
-                *self.ip_mut() += 1;
-                constant
-            }};
-        }
-
-        macro_rules! frame {
-            () => {
-                self.call_stack.last().unwrap()
-            };
-        }
-
         /// Generate vm for binary operator.
         macro_rules! gen_num_binary_op {
             ($op: tt, $result: path) => {{
@@ -158,73 +173,42 @@ impl<'a> Vm<'a> {
             }
         }
 
-        /// Uses the last value on the stack as the return value and cleans up the local variables created inside the function.
-        macro_rules! cleanup_function {
-            () => {{
-                let return_value = self.stack.pop().unwrap();
-                let frame = self.call_stack.pop().unwrap(); // remove a `CallFrame` from the call stack.
-
-                for i in frame.frame_pointer..self.stack.len() {
-                    self.close_upvalues(i);
-                }
-                // cleanup local variables created in function
-                self.stack.truncate(frame.frame_pointer);
-
-                self.stack.push(return_value);
-            }}
-        }
-
-        /// If inside a function, cleans up and returns `true`. Else returns `false` and does nothing.
-        macro_rules! try_implicit_ret {
-            () => {{
-                if self.call_stack.len() > 1 {
-                    // inside a function
-                    self.stack.push(Value::Number(0.0)); // FIXME: returns 0.0 by default
-                    cleanup_function!();
-                    true
-                } else {
-                    self.call_stack.pop().unwrap();
-                    false
-                }
-            }};
-        }
-
-        while self.ip() < self.code().len() || try_implicit_ret!() {
-            let opcode = read_u8!();
+        while self.ip() < self.code().len() || self.try_implicit_ret() {
+            let opcode = self.read_u8();
             let opcode = OpCode::from_u8(opcode).expect("invalid opcode");
             match opcode {
                 OpCode::Ldc => {
-                    let constant = read_constant!();
+                    let constant = self.read_constant();
                     self.stack.push(constant);
                 }
                 OpCode::Ldf64 => {
-                    let value = read_f64!();
+                    let value = self.read_f64();
                     self.stack.push(Value::Number(value));
                 }
                 OpCode::Ld0 => self.stack.push(Value::Number(0.0)),
                 OpCode::Ld1 => self.stack.push(Value::Number(1.0)),
                 OpCode::LdLoc => {
-                    let local_index = read_u8!() + frame!().frame_pointer as u8;
+                    let local_index = self.read_u8() + self.frame().frame_pointer as u8;
                     let local = self.stack[local_index as usize].clone();
                     self.stack.push(local);
                 }
                 OpCode::StLoc => {
-                    let local_index = read_u8!() + frame!().frame_pointer as u8;
+                    let local_index = self.read_u8() + self.frame().frame_pointer as u8;
                     let value = self.stack.last().unwrap().clone();
                     self.stack[local_index as usize] = value;
                 }
                 OpCode::LdGlobal => {
-                    let index = read_u8!();
+                    let index = self.read_u8();
                     let local = self.stack[index as usize].clone();
                     self.stack.push(local);
                 }
                 OpCode::StGlobal => {
-                    let index = read_u8!();
+                    let index = self.read_u8();
                     let value = self.stack.last().unwrap().clone();
                     self.stack[index as usize] = value;
                 }
                 OpCode::LdUpVal => {
-                    let index = read_u8!();
+                    let index = self.read_u8();
                     let upvalue = self.call_stack.last().unwrap().closure.upvalues.borrow()
                         [index as usize]
                         .clone();
@@ -232,7 +216,7 @@ impl<'a> Vm<'a> {
                     self.stack.push(value);
                 }
                 OpCode::StUpVal => {
-                    let index = read_u8!();
+                    let index = self.read_u8();
                     let value = self.stack.last().unwrap().clone();
                     let upvalue = self.call_stack.last().unwrap().closure.upvalues.borrow()
                         [index as usize]
@@ -293,21 +277,21 @@ impl<'a> Vm<'a> {
                     if self.call_stack.len() <= 1 {
                         return self.runtime_error("Can only use return in a function.");
                     }
-                    cleanup_function!();
+                    self.cleanup_function();
                 }
                 OpCode::Ret0 => {
                     self.stack.push(Value::Number(0.0));
                     if self.call_stack.len() <= 1 {
                         return self.runtime_error("Can only use return in a function.");
                     }
-                    cleanup_function!();
+                    self.cleanup_function();
                 }
                 OpCode::Ret1 => {
                     self.stack.push(Value::Number(1.0));
                     if self.call_stack.len() <= 1 {
                         return self.runtime_error("Can only use return in a function.");
                     }
-                    cleanup_function!();
+                    self.cleanup_function();
                 }
                 OpCode::LdTrue => self.stack.push(Value::Bool(true)),
                 OpCode::LdFalse => self.stack.push(Value::Bool(false)),
@@ -328,7 +312,7 @@ impl<'a> Vm<'a> {
                                 unreachable!("can not call ObjKind::Fn, wrap function in a ObjKind::Closure instead");
                             }
                             ObjKind::Closure(closure) => {
-                                let calli_arity = read_u8!();
+                                let calli_arity = self.read_u8();
 
                                 if closure.func.arity != calli_arity as u32 {
                                     return self.runtime_error(format!(
@@ -349,7 +333,7 @@ impl<'a> Vm<'a> {
                                 arity,
                                 func,
                             }) => {
-                                let calli_arity = read_u8!();
+                                let calli_arity = self.read_u8();
 
                                 if *arity != calli_arity as u32 {
                                     return self.runtime_error(format!(
@@ -375,7 +359,7 @@ impl<'a> Vm<'a> {
                     }
                 }
                 OpCode::Closure => {
-                    let func = match read_constant!() {
+                    let func = match self.read_constant() {
                         Value::Object(obj) => match &obj.kind {
                             ObjKind::Fn(function) => function.clone(),
                             _ => unreachable!(),
@@ -390,8 +374,8 @@ impl<'a> Vm<'a> {
                     };
 
                     for _i in 0..upvalues_count {
-                        let is_local = read_u8!() != 0;
-                        let upvalue_index = read_u8!();
+                        let is_local = self.read_u8() != 0;
+                        let upvalue_index = self.read_u8();
 
                         let upvalue = if is_local {
                             match self.find_open_upvalue_with_index(upvalue_index as usize) {
@@ -405,7 +389,7 @@ impl<'a> Vm<'a> {
                                 }
                             }
                         } else {
-                            frame!().closure.upvalues.borrow()[upvalue_index as usize].clone()
+                            self.frame().closure.upvalues.borrow()[upvalue_index as usize].clone()
                         };
 
                         closure.upvalues.borrow_mut().push(upvalue);
@@ -417,17 +401,17 @@ impl<'a> Vm<'a> {
                     })));
                 }
                 OpCode::Jmp => {
-                    let offset = read_u16!();
+                    let offset = self.read_u16();
                     *self.ip_mut() += offset as usize;
                 }
                 OpCode::JmpIfFalse => {
-                    let offset = read_u16!();
+                    let offset = self.read_u16();
                     if matches!(self.stack.last().unwrap(), Value::Bool(false)) {
                         *self.ip_mut() += offset as usize;
                     }
                 }
                 OpCode::Loop => {
-                    let offset = read_u16!();
+                    let offset = self.read_u16();
                     *self.ip_mut() -= offset as usize;
                 }
             }
