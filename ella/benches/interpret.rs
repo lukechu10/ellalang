@@ -44,12 +44,12 @@ macro_rules! benchmark_source {
     ($c: expr, $name: expr, $source: expr) => {{
         let builtin_vars = default_builtin_vars();
         let (chunk, mut vm) = codegen_str($source, &builtin_vars);
-        let initial_stack = vm.stack().clone();
+        let initial_state = vm.vm_state().clone();
 
         $c.bench_function($name, |b| {
             b.iter(|| {
                 // reset stack
-                vm.restore_stack(initial_stack.clone());
+                vm.restore_vm_state(initial_state.clone());
                 vm.interpret(chunk.clone());
             });
         });
