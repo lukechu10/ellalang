@@ -153,21 +153,6 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     self.chunk.write_chunk(OpCode::StLoc, $line);
                     self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
                 }
-
-                self.chunk.write_chunk(OpCode::Pop, $line); // remove rhs
-                self.chunk.write_chunk(OpCode::Pop, $line); // intentional 2nd pop
-
-                // load value, result of op assign is new value
-                if resolved_symbol.is_global {
-                    self.chunk.write_chunk(OpCode::LdGlobal, $line);
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
-                } else if resolved_symbol.is_upvalue {
-                    self.chunk.write_chunk(OpCode::LdUpVal, $line);
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
-                } else {
-                    self.chunk.write_chunk(OpCode::LdLoc, $line);
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
-                }
             }};
         }
 
@@ -231,13 +216,13 @@ impl<'a> Visitor<'a> for Codegen<'a> {
             }
             ExprKind::Binary { lhs, op, rhs } => {
                 match op {
-                    Token::Equals
-                    | Token::PlusEquals
-                    | Token::MinusEquals
-                    | Token::AsteriskEquals
-                    | Token::SlashEquals => {
+                    Token::Equals => {
                         self.visit_expr(rhs); // do not codegen lhs
                     }
+                    Token::PlusEquals
+                    | Token::MinusEquals
+                    | Token::AsteriskEquals
+                    | Token::SlashEquals => {} // do not codegen anything (handled in gen_op_assign!)
                     _ => {
                         self.visit_expr(lhs);
                         self.visit_expr(rhs);
