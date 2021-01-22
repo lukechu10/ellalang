@@ -216,13 +216,11 @@ impl<'a> Visitor<'a> for Codegen<'a> {
             }
             ExprKind::Binary { lhs, op, rhs } => {
                 match op {
-                    Token::Equals => {
-                        self.visit_expr(rhs); // do not codegen lhs
-                    }
-                    Token::PlusEquals
+                    Token::Equals
+                    | Token::PlusEquals
                     | Token::MinusEquals
                     | Token::AsteriskEquals
-                    | Token::SlashEquals => {} // do not codegen anything (handled in gen_op_assign!)
+                    | Token::SlashEquals => {} // do not codegen anything
                     _ => {
                         self.visit_expr(lhs);
                         self.visit_expr(rhs);
@@ -242,6 +240,8 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                         self.chunk.write_chunk(OpCode::Div, line);
                     }
                     Token::Equals => {
+                        self.visit_expr(rhs);
+
                         let resolved_symbol =
                             *self.resolve_result.lookup_identifier(lhs.as_ref()).unwrap();
 
