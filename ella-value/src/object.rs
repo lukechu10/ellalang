@@ -28,7 +28,7 @@ pub struct Function {
     /// The number of arguments the function accepts.
     pub arity: u32,
     /// The chunk of the function.
-    pub chunk: Chunk,
+    pub chunk: Rc<Chunk>,
     /// The number of upvalues this function captures.
     /// If the function does not capture any variable, this should be `0`.
     pub upvalues_count: usize,

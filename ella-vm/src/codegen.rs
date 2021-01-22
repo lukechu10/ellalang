@@ -320,7 +320,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     kind: ObjKind::Fn(Function {
                         ident,
                         arity,
-                        chunk: fn_chunk,
+                        chunk: Rc::new(fn_chunk),
                         upvalues_count: symbol.borrow().upvalues.len(),
                     }),
                 });
@@ -372,7 +372,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     kind: ObjKind::Fn(Function {
                         ident,
                         arity,
-                        chunk: fn_chunk,
+                        chunk: Rc::new(fn_chunk),
                         upvalues_count: symbol.borrow().upvalues.len(),
                     }),
                 });
