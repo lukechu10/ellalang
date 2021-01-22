@@ -153,21 +153,6 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     self.chunk.write_chunk(OpCode::StLoc, $line);
                     self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
                 }
-
-                self.chunk.write_chunk(OpCode::Pop, $line); // remove rhs
-                self.chunk.write_chunk(OpCode::Pop, $line); // intentional 2nd pop
-
-                // load value, result of op assign is new value
-                if resolved_symbol.is_global {
-                    self.chunk.write_chunk(OpCode::LdGlobal, $line);
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
-                } else if resolved_symbol.is_upvalue {
-                    self.chunk.write_chunk(OpCode::LdUpVal, $line);
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
-                } else {
-                    self.chunk.write_chunk(OpCode::LdLoc, $line);
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
-                }
             }};
         }
 
@@ -235,9 +220,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     | Token::PlusEquals
                     | Token::MinusEquals
                     | Token::AsteriskEquals
-                    | Token::SlashEquals => {
-                        self.visit_expr(rhs); // do not codegen lhs
-                    }
+                    | Token::SlashEquals => {} // do not codegen anything
                     _ => {
                         self.visit_expr(lhs);
                         self.visit_expr(rhs);
@@ -257,6 +240,8 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                         self.chunk.write_chunk(OpCode::Div, line);
                     }
                     Token::Equals => {
+                        self.visit_expr(rhs);
+
                         let resolved_symbol =
                             *self.resolve_result.lookup_identifier(lhs.as_ref()).unwrap();
 
@@ -335,7 +320,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     kind: ObjKind::Fn(Function {
                         ident,
                         arity,
-                        chunk: fn_chunk,
+                        chunk: Rc::new(fn_chunk),
                         upvalues_count: symbol.borrow().upvalues.len(),
                     }),
                 });
@@ -387,7 +372,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     kind: ObjKind::Fn(Function {
                         ident,
                         arity,
-                        chunk: fn_chunk,
+                        chunk: Rc::new(fn_chunk),
                         upvalues_count: symbol.borrow().upvalues.len(),
                     }),
                 });

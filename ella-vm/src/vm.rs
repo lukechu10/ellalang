@@ -442,7 +442,7 @@ impl<'a> Vm<'a> {
     pub fn interpret(&mut self, chunk: Chunk) -> InterpretResult {
         let func = Function {
             arity: 0,
-            chunk,
+            chunk: Rc::new(chunk),
             ident: "top".to_string(),
             upvalues_count: 0, // cannot have any upvalues for top-level function
         };
