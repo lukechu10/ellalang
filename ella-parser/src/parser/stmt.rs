@@ -289,6 +289,10 @@ mod tests {
     fn test_let_declaration() {
         assert_debug_snapshot!("let-declaration", stmt("let x = 2;"));
         assert_debug_snapshot!("let-declaration-with-expr", stmt("let x = 1 + 2;"));
+        assert_debug_snapshot!(
+            "let-declaration-with-type-annotation",
+            stmt("let x: u32 = 2;")
+        );
     }
 
     #[test]

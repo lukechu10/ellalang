@@ -14,7 +14,7 @@ pub enum Token {
     StringLit(String),
 
     // identifiers
-    #[regex("[a-zA-Z_]+", |lex| lex.slice().to_string())]
+    #[regex("[a-zA-Z_]+[a-zA-Z0-9_]*", |lex| lex.slice().to_string())]
     Identifier(String),
 
     // unary operators
