@@ -44,7 +44,7 @@ impl<'a> Parser<'a> {
         let lo = self.node_start();
 
         let mut body = Vec::new();
-        while !matches!(self.current_token, Token::Eof | Token::Error) {
+        while self.current_token != Token::Eof {
             body.push(self.parse_declaration());
         }
 
@@ -62,7 +62,7 @@ impl<'a> Parser<'a> {
         let lo = self.node_start();
 
         let mut body = Vec::new();
-        while !matches!(self.current_token, Token::Eof | Token::Error) {
+        while self.current_token != Token::Eof {
             body.push(self.parse_declaration());
         }
 

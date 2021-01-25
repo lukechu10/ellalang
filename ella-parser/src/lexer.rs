@@ -68,6 +68,8 @@ pub enum Token {
     CloseBrace,
     #[token(",")]
     Comma,
+    #[token(":")]
+    Colon,
     #[token(";")]
     Semi,
 
