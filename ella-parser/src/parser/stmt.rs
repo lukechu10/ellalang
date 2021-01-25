@@ -1,4 +1,4 @@
-use crate::ast::StmtKind;
+use crate::ast::{StmtKind, TypePath};
 
 use super::*;
 
@@ -123,6 +123,27 @@ impl<'a> Parser<'a> {
         StmtKind::WhileStmt { condition, body }.with_span(lo..self.node_end())
     }
 
+    /// Parses an optional type annotation. A type annotation is always preceded by a `:` colon token.
+    fn parse_optional_type_annotation(&mut self) -> Option<TypePath> {
+        if self.eat(Token::Colon) {
+            let lo = self.node_start();
+            let ident = if let Token::Identifier(ref ident) = self.current_token {
+                let ident = ident.clone();
+                self.next();
+                ident
+            } else {
+                self.unexpected();
+                return None;
+            };
+            Some(TypePath {
+                ident,
+                span: lo..self.node_end(),
+            })
+        } else {
+            None
+        }
+    }
+
     fn parse_let_declaration(&mut self) -> Stmt {
         let lo = self.node_start();
 
@@ -135,13 +156,16 @@ impl<'a> Parser<'a> {
             self.unexpected();
             return StmtKind::Error.with_span(lo..self.node_end());
         };
+
+        let ty = self.parse_optional_type_annotation();
+
         self.expect(Token::Equals);
         let initializer = self.parse_expr();
         self.expect(Token::Semi);
         StmtKind::LetDeclaration {
             ident,
             initializer,
-            ty: None,
+            ty,
         }
         .with_span(lo..self.node_end())
     }

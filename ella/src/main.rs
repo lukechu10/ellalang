@@ -35,6 +35,7 @@ fn repl() {
         let source = input.as_str().into();
         let mut parser = Parser::new(&source);
         let ast = parser.parse_repl_input();
+        eprintln!("{:#?}", ast);
 
         let mut resolver =
             Resolver::new_with_existing_accessible_symbols(&source, accessible_symbols.clone());

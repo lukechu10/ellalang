@@ -8,7 +8,8 @@ use crate::lexer::Token;
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypePath {
     /// The identifier of the the type.
-    ident: String,
+    pub ident: String,
+    pub span: Range<usize>,
 }
 
 /// Wrapper around [`ExprKind`]
