@@ -64,6 +64,7 @@ pub fn walk_stmt<'ast>(visitor: &mut impl Visitor<'ast>, stmt: &'ast Stmt) {
         StmtKind::LetDeclaration {
             ident: _,
             initializer,
+            ty: _,
         } => visitor.visit_expr(initializer),
         StmtKind::FnDeclaration {
             ident: _,

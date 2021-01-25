@@ -138,12 +138,17 @@ impl<'a> Parser<'a> {
         self.expect(Token::Equals);
         let initializer = self.parse_expr();
         self.expect(Token::Semi);
-        StmtKind::LetDeclaration { ident, initializer }.with_span(lo..self.node_end())
+        StmtKind::LetDeclaration {
+            ident,
+            initializer,
+            ty: None,
+        }
+        .with_span(lo..self.node_end())
     }
 
     fn parse_fn_declaration(&mut self) -> Stmt {
         let lo = self.node_start();
-        
+
         self.expect(Token::Fn);
         let ident = if let Token::Identifier(ref ident) = self.current_token {
             let ident = ident.clone();
@@ -192,7 +197,8 @@ impl<'a> Parser<'a> {
             body,
             ident,
             params,
-        }.with_span(lo..self.node_end())
+        }
+        .with_span(lo..self.node_end())
     }
 
     fn parse_return_stmt(&mut self) -> Stmt {

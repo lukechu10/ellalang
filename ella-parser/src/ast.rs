@@ -4,6 +4,13 @@ use std::ops::Range;
 
 use crate::lexer::Token;
 
+/// Represents a type in the source code.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypePath {
+    /// The identifier of the the type.
+    ident: String,
+}
+
 /// Wrapper around [`ExprKind`]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expr {
@@ -61,7 +68,12 @@ pub struct Stmt {
 #[derive(Debug, Clone, PartialEq)]
 pub enum StmtKind {
     /// Variable declaration.
-    LetDeclaration { ident: String, initializer: Expr },
+    LetDeclaration {
+        ident: String,
+        initializer: Expr,
+        /// Optional type annotation.
+        ty: Option<TypePath>,
+    },
     /// Function declaration.
     FnDeclaration {
         ident: String,

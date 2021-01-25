@@ -11,6 +11,7 @@ Stmt {
             ),
             span: 8..9,
         },
+        ty: None,
     },
     span: 0..10,
 }

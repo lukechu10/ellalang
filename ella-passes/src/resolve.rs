@@ -335,7 +335,7 @@ impl<'a> Visitor<'a> for Resolver<'a> {
         // Do not use default walking logic.
 
         match &stmt.kind {
-            StmtKind::LetDeclaration { ident, initializer } => {
+            StmtKind::LetDeclaration { ident, initializer, ty: _ } => {
                 self.visit_expr(initializer);
                 self.add_symbol(ident.clone(), Some(stmt));
             }

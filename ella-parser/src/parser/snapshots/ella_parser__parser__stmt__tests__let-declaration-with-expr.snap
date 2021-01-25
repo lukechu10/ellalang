@@ -23,6 +23,7 @@ Stmt {
             },
             span: 8..13,
         },
+        ty: None,
     },
     span: 0..14,
 }

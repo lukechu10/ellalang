@@ -346,6 +346,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
             StmtKind::LetDeclaration {
                 ident: _,
                 initializer,
+                ty: _,
             } => {
                 self.visit_expr(initializer); // Push value of expression onto top of stack.
                 self.add_symbol(stmt);
