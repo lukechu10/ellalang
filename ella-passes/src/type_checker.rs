@@ -263,9 +263,20 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
             }
             ExprKind::Lambda {
                 inner_stmt: _,
-                params: _,
+                params,
                 body: _,
-            } => todo!(),
+            } => {
+                let ty = UniqueType::Builtin(BuiltinType::Fn {
+                    params: vec![UniqueType::Unknown; params.len()],
+                    ret: Box::new(UniqueType::Unknown),
+                });
+
+                for param in params {
+                    self.visit_stmt(param);
+                }
+                // FIXME give function proper type
+                ty
+            }
             ExprKind::Error => UniqueType::Unknown,
         };
         self.expr_type_table.insert(expr as *const Expr, ty);

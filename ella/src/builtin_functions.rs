@@ -75,7 +75,7 @@ pub fn default_builtin_vars() -> BuiltinVars {
         &parse_number,
         1,
         BuiltinType::Fn {
-            params: vec![BuiltinType::String.into()],
+            params: vec![UniqueType::Any],
             ret: Box::new(BuiltinType::Number.into()),
         }
         .into(),
