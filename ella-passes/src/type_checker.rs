@@ -6,31 +6,9 @@ use ella_parser::ast::{Expr, ExprKind, Stmt, StmtKind};
 use ella_parser::lexer::Token;
 use ella_parser::visitor::{walk_expr, walk_stmt, Visitor};
 use ella_source::{Source, SyntaxError};
-use ella_value::BuiltinVars;
+use ella_value::{BuiltinType, BuiltinVars, UniqueType};
 
 use crate::resolve::{ResolveResult, Symbol};
-
-/// Represents a builtin type.
-#[derive(Debug, Clone, PartialEq)]
-pub enum BuiltinType {
-    Bool,
-    Number,
-    String,
-    Function {
-        params: Vec<UniqueType>,
-        ret: Box<UniqueType>,
-    },
-}
-
-/// Represents an unique type.
-#[derive(Debug, Clone, PartialEq)]
-pub enum UniqueType {
-    Builtin(BuiltinType),
-    /// Runtime type.
-    Any,
-    /// Error case.
-    Unknown,
-}
 
 pub type SymbolTypeTable = HashMap<*const Symbol, UniqueType>;
 pub type ExprTypeTable = HashMap<*const Expr, UniqueType>;
@@ -77,7 +55,7 @@ impl<'a> TypeChecker<'a> {
     }
 
     pub fn type_check_builtin_vars(&mut self, builtin_vars: &BuiltinVars) {
-        for (ident, _value) in &builtin_vars.values {
+        for (ident, _value, ty) in &builtin_vars.values {
             let symbol = self
                 .resolve_result
                 .lookup_in_accessible_symbols(ident)
@@ -85,7 +63,7 @@ impl<'a> TypeChecker<'a> {
 
             assert!(self
                 .symbol_type_table
-                .insert(symbol.as_ptr() as *const Symbol, UniqueType::Unknown)
+                .insert(symbol.as_ptr() as *const Symbol, ty.clone())
                 .is_none());
         }
     }
@@ -133,7 +111,7 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                     .expr_type_table
                     .get(&(callee.as_ref() as *const Expr))
                     .unwrap();
-                if let UniqueType::Builtin(BuiltinType::Function { params, ret }) = callee_ty {
+                if let UniqueType::Builtin(BuiltinType::Fn { params, ret }) = callee_ty {
                     // check arity
                     if args.len() != params.len() {
                         self.source.errors.add_error(SyntaxError::new(
@@ -144,6 +122,24 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                             ),
                             expr.span.clone(),
                         ));
+                    }
+                    // check params type
+                    for i in 0..params.len() {
+                        let param_ty = params[i].clone();
+                        let arg_ty = self
+                            .expr_type_table
+                            .get(&(&args[i] as *const Expr))
+                            .unwrap();
+
+                        if &param_ty != arg_ty {
+                            self.source.errors.add_error(SyntaxError::new(
+                                format!(
+                                    "wrong type in argument position {}",
+                                    i + 1, // +1 for 1-based index
+                                ),
+                                args[i].span.clone(),
+                            ));
+                        }
                     }
                     ret.as_ref().clone()
                 } else {
@@ -337,7 +333,7 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
             } => {
                 let symbol = self.resolve_result.lookup_declaration(stmt).unwrap();
 
-                let ty = UniqueType::Builtin(BuiltinType::Function {
+                let ty = UniqueType::Builtin(BuiltinType::Fn {
                     params: vec![UniqueType::Unknown; params.len()],
                     ret: Box::new(UniqueType::Unknown),
                 });

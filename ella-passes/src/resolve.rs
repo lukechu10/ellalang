@@ -258,7 +258,7 @@ impl<'a> Resolver<'a> {
 
     /// Resolve builtin variables.
     pub fn resolve_builtin_vars(&mut self, builtin_vars: &BuiltinVars) {
-        for (ident, _value) in &builtin_vars.values {
+        for (ident, _value, _ty) in &builtin_vars.values {
             self.add_symbol(ident.clone(), None);
         }
     }

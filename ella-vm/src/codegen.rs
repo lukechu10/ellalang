@@ -65,7 +65,7 @@ impl<'a> Codegen<'a> {
     }
 
     pub fn codegen_builtin_vars(&mut self, builtin_vars: &BuiltinVars) {
-        for (_ident, value) in &builtin_vars.values {
+        for (_ident, value, _ty) in &builtin_vars.values {
             let constant = self.chunk.add_constant(value.clone());
             self.chunk.write_chunk(OpCode::Ldc, 0);
             self.chunk.write_chunk(constant, 0);
