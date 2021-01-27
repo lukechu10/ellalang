@@ -310,8 +310,9 @@ mod functions {
         fn capture_by_ref() {
             interpret(
                 r#"
-                let globalSet = 0;
-                let globalGet = 0;
+                fn dummy() {}
+                let globalSet = dummy; // dummy function to prevent type errors
+                let globalGet = dummy;
 
                 fn main() {
                     let a = "initial";

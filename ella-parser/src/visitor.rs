@@ -38,9 +38,12 @@ pub fn walk_expr<'ast>(visitor: &mut impl Visitor<'ast>, expr: &'ast Expr) {
         ExprKind::Unary { op: _, arg } => visitor.visit_expr(arg),
         ExprKind::Lambda {
             inner_stmt: _,
-            params: _,
+            params,
             body,
         } => {
+            for param in params {
+                visitor.visit_stmt(param);
+            }
             for stmt in body {
                 visitor.visit_stmt(stmt);
             }

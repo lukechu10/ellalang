@@ -6,9 +6,24 @@ Stmt {
     kind: FnDeclaration {
         ident: "foo",
         params: [
-            "a",
-            "b",
-            "c",
+            Stmt {
+                kind: FnParam {
+                    ident: "a",
+                },
+                span: 7..8,
+            },
+            Stmt {
+                kind: FnParam {
+                    ident: "b",
+                },
+                span: 10..11,
+            },
+            Stmt {
+                kind: FnParam {
+                    ident: "c",
+                },
+                span: 13..14,
+            },
         ],
         body: [],
     },

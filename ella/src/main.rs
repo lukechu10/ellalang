@@ -1,6 +1,5 @@
 use ella::builtin_functions::default_builtin_vars;
 use ella_parser::parser::Parser;
-use ella_parser::visitor::Visitor;
 use ella_passes::resolve::Resolver;
 use ella_passes::type_checker::TypeChecker;
 use ella_source::Source;

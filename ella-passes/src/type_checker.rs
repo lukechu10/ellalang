@@ -142,6 +142,8 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                         }
                     }
                     ret.as_ref().clone()
+                } else if callee_ty == &UniqueType::Any {
+                    UniqueType::Any
                 } else {
                     self.source.errors.add_error(SyntaxError::new(
                         "value is not a function",
@@ -160,78 +162,87 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                     .get(&(rhs.as_ref() as *const Expr))
                     .unwrap();
 
-                match op {
-                    Token::Plus => {
-                        if lhs_ty == &UniqueType::Builtin(BuiltinType::Number)
-                            && rhs_ty == &UniqueType::Builtin(BuiltinType::Number)
-                        {
+                if lhs_ty == &UniqueType::Any || rhs_ty == &UniqueType::Any {
+                    UniqueType::Any // propagate any
+                } else {
+                    match op {
+                        Token::Plus => {
+                            if lhs_ty == &UniqueType::Builtin(BuiltinType::Number)
+                                && rhs_ty == &UniqueType::Builtin(BuiltinType::Number)
+                            {
+                                UniqueType::Builtin(BuiltinType::Number)
+                            } else if lhs_ty == &UniqueType::Builtin(BuiltinType::String)
+                                && rhs_ty == &UniqueType::Builtin(BuiltinType::String)
+                            {
+                                UniqueType::Builtin(BuiltinType::String)
+                            } else {
+                                self.source.errors.add_error(SyntaxError::new(
+                                    "expected numbers or strings for addition",
+                                    expr.span.clone(),
+                                ));
+                                UniqueType::Unknown
+                            }
+                        }
+                        Token::Minus => {
+                            if lhs_ty != &UniqueType::Builtin(BuiltinType::Number)
+                                || rhs_ty != &UniqueType::Builtin(BuiltinType::Number)
+                            {
+                                self.source.errors.add_error(SyntaxError::new(
+                                    "expected numbers for subtraction",
+                                    expr.span.clone(),
+                                ));
+                            }
                             UniqueType::Builtin(BuiltinType::Number)
-                        } else if lhs_ty == &UniqueType::Builtin(BuiltinType::String)
-                            && rhs_ty == &UniqueType::Builtin(BuiltinType::String)
-                        {
-                            UniqueType::Builtin(BuiltinType::String)
-                        } else {
-                            self.source.errors.add_error(SyntaxError::new(
-                                "expected numbers or strings for addition",
-                                expr.span.clone(),
-                            ));
-                            UniqueType::Unknown
                         }
-                    }
-                    Token::Minus => {
-                        if lhs_ty != &UniqueType::Builtin(BuiltinType::Number)
-                            || rhs_ty != &UniqueType::Builtin(BuiltinType::Number)
-                        {
-                            self.source.errors.add_error(SyntaxError::new(
-                                "expected numbers for subtraction",
-                                expr.span.clone(),
-                            ));
+                        Token::Asterisk => {
+                            if lhs_ty != &UniqueType::Builtin(BuiltinType::Number)
+                                || rhs_ty != &UniqueType::Builtin(BuiltinType::Number)
+                            {
+                                self.source.errors.add_error(SyntaxError::new(
+                                    "expected numbers for multiplication",
+                                    expr.span.clone(),
+                                ));
+                            }
+                            UniqueType::Builtin(BuiltinType::Number)
                         }
-                        UniqueType::Builtin(BuiltinType::Number)
-                    }
-                    Token::Asterisk => {
-                        if lhs_ty != &UniqueType::Builtin(BuiltinType::Number)
-                            || rhs_ty != &UniqueType::Builtin(BuiltinType::Number)
-                        {
-                            self.source.errors.add_error(SyntaxError::new(
-                                "expected numbers for multiplication",
-                                expr.span.clone(),
-                            ));
+                        Token::Slash => {
+                            if lhs_ty != &UniqueType::Builtin(BuiltinType::Number)
+                                || rhs_ty != &UniqueType::Builtin(BuiltinType::Number)
+                            {
+                                self.source.errors.add_error(SyntaxError::new(
+                                    "expected numbers for division",
+                                    expr.span.clone(),
+                                ));
+                            }
+                            UniqueType::Builtin(BuiltinType::Number)
                         }
-                        UniqueType::Builtin(BuiltinType::Number)
-                    }
-                    Token::Slash => {
-                        if lhs_ty != &UniqueType::Builtin(BuiltinType::Number)
-                            || rhs_ty != &UniqueType::Builtin(BuiltinType::Number)
-                        {
-                            self.source.errors.add_error(SyntaxError::new(
-                                "expected numbers for division",
-                                expr.span.clone(),
-                            ));
+                        Token::Equals
+                        | Token::PlusEquals
+                        | Token::MinusEquals
+                        | Token::AsteriskEquals
+                        | Token::SlashEquals => {
+                            // result of assignment is new value
+                            if !rhs_ty.can_implicit_cast_to(lhs_ty) {
+                                self.source.errors.add_error(SyntaxError::new(
+                                    "wrong type in assignment",
+                                    expr.span.clone(),
+                                ));
+                            }
+                            lhs_ty.clone()
                         }
-                        UniqueType::Builtin(BuiltinType::Number)
-                    }
-                    Token::Equals
-                    | Token::PlusEquals
-                    | Token::MinusEquals
-                    | Token::AsteriskEquals
-                    | Token::SlashEquals => {
-                        // result of assignment is new value
-                        // TODO: check if operation is valid
-                        lhs_ty.clone()
-                    }
-                    Token::EqualsEquals
-                    | Token::NotEquals
-                    | Token::LessThan
-                    | Token::LessThanEquals
-                    | Token::GreaterThan
-                    | Token::GreaterThanEquals => {
-                        if lhs_ty != rhs_ty {
-                            self.source.errors.add_error(SyntaxError::new("comparison operators can only be used on two values of the same type", expr.span.clone()));
+                        Token::EqualsEquals
+                        | Token::NotEquals
+                        | Token::LessThan
+                        | Token::LessThanEquals
+                        | Token::GreaterThan
+                        | Token::GreaterThanEquals => {
+                            if lhs_ty != rhs_ty {
+                                self.source.errors.add_error(SyntaxError::new("comparison operators can only be used on two values of the same type", expr.span.clone()));
+                            }
+                            UniqueType::Builtin(BuiltinType::Bool)
                         }
-                        UniqueType::Builtin(BuiltinType::Bool)
+                        _ => unreachable!(),
                     }
-                    _ => unreachable!(),
                 }
             }
             ExprKind::Unary { op, arg } => {
@@ -267,13 +278,9 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                 body: _,
             } => {
                 let ty = UniqueType::Builtin(BuiltinType::Fn {
-                    params: vec![UniqueType::Unknown; params.len()],
-                    ret: Box::new(UniqueType::Unknown),
+                    params: vec![UniqueType::Any; params.len()],
+                    ret: Box::new(UniqueType::Any),
                 });
-
-                for param in params {
-                    self.visit_stmt(param);
-                }
                 // FIXME give function proper type
                 ty
             }
@@ -283,7 +290,10 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
     }
 
     fn visit_stmt(&mut self, stmt: &'a Stmt) {
-        walk_stmt(self, stmt);
+        if !matches!(&stmt.kind, StmtKind::FnDeclaration{..}) {
+            // function declaration must be type checked first before body to allow for recursion
+            walk_stmt(self, stmt);
+        }
 
         match &stmt.kind {
             StmtKind::LetDeclaration {
@@ -335,24 +345,29 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                 let symbol = self.resolve_result.lookup_declaration(stmt).unwrap();
 
                 self.symbol_type_table
-                    .insert(symbol.as_ptr() as *const Symbol, UniqueType::Unknown);
+                    .insert(symbol.as_ptr() as *const Symbol, UniqueType::Any);
             }
             StmtKind::FnDeclaration {
                 ident: _,
                 params,
-                body: _,
+                body,
             } => {
+                // NOTE: walking is not enabled for this case
+
                 let symbol = self.resolve_result.lookup_declaration(stmt).unwrap();
 
                 let ty = UniqueType::Builtin(BuiltinType::Fn {
-                    params: vec![UniqueType::Unknown; params.len()],
-                    ret: Box::new(UniqueType::Unknown),
+                    params: vec![UniqueType::Any; params.len()],
+                    ret: Box::new(UniqueType::Any),
                 });
                 self.symbol_type_table
                     .insert(symbol.as_ptr() as *const Symbol, ty);
 
                 for param in params {
                     self.visit_stmt(param);
+                }
+                for stmt in body {
+                    self.visit_stmt(stmt);
                 }
                 // FIXME give function proper type
             }

@@ -9,7 +9,12 @@ Expr {
             span: 0..9,
         },
         params: [
-            "x",
+            Stmt {
+                kind: FnParam {
+                    ident: "x",
+                },
+                span: 4..5,
+            },
         ],
         body: [],
     },
