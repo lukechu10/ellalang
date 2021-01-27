@@ -225,7 +225,7 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                             if !rhs_ty.can_implicit_cast_to(lhs_ty) {
                                 self.source.errors.add_error(SyntaxError::new(
                                     "wrong type in assignment",
-                                    expr.span.clone(),
+                                    rhs.span.clone(),
                                 ));
                             }
                             lhs_ty.clone()
@@ -302,19 +302,29 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                 ty,
             } => {
                 let ty = match ty {
-                    Some(ty_path) => match ty_path.ident.as_str() {
-                        // TODO: make sure initializer has correct type
-                        "bool" => UniqueType::Builtin(BuiltinType::Bool),
-                        "number" => UniqueType::Builtin(BuiltinType::Number),
-                        "string" => UniqueType::Builtin(BuiltinType::String),
-                        _ => {
+                    Some(ty_path) => {
+                        let ty = match ty_path.ident.as_str() {
+                            "bool" => UniqueType::Builtin(BuiltinType::Bool),
+                            "number" => UniqueType::Builtin(BuiltinType::Number),
+                            "string" => UniqueType::Builtin(BuiltinType::String),
+                            _ => {
+                                self.source.errors.add_error(SyntaxError::new(
+                                    format!("unknown type \"{}\"", ty_path.ident),
+                                    ty_path.span.clone(),
+                                ));
+                                UniqueType::Unknown
+                            }
+                        };
+                        // make sure initializer has right type
+                        let initializer_ty = self.expr_type_table.get(&(initializer as *const Expr)).unwrap();
+                        if !initializer_ty.can_implicit_cast_to(&ty) {
                             self.source.errors.add_error(SyntaxError::new(
-                                format!("unknown type \"{}\"", ty_path.ident),
-                                ty_path.span.clone(),
-                            ));
-                            UniqueType::Unknown
+                                "initializer has wrong type",
+                                initializer.span.clone(),
+                            ))
                         }
-                    },
+                        ty
+                    }
                     None => {
                         if let Some(ty) = self.expr_type_table.get(&(initializer as *const Expr)) {
                             if ty == &UniqueType::Unknown {
