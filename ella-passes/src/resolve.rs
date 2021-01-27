@@ -30,10 +30,20 @@ impl ResolveResult {
     pub fn lookup_identifier(&self, expr: &Expr) -> Option<&ResolvedSymbol> {
         self.resolved_symbol_table.get(&(expr as *const Expr))
     }
+
+    /// Lookup an identifier in the current `accessible_symbols` list.
+    pub fn lookup_in_accessible_symbols(&self, ident: &str) -> Option<&Rc<RefCell<Symbol>>> {
+        for symbol in self.accessible_symbols.iter().rev() {
+            if symbol.borrow().ident == ident {
+                return Some(symbol);
+            }
+        }
+        None
+    }
 }
 
 /// Represents a symbol (created using `let`, `fn` declaration statement or lambda expression).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Symbol {
     ident: String,
     scope_depth: u32,
@@ -120,14 +130,6 @@ impl<'a> Resolver<'a> {
             resolved_symbol_table: self.resolved_symbol_table,
             accessible_symbols: self.accessible_symbols,
         }
-    }
-
-    /// Returns the list of accessible symbols.
-    /// This method is used to implement REPL functionality (for restoring global variables).
-    /// See [`Self::new_with_existing_accessible_symbols`].
-    #[deprecated]
-    pub fn accessible_symbols(&self) -> &Vec<Rc<RefCell<Symbol>>> {
-        &self.accessible_symbols
     }
 
     /// Enter a scope.

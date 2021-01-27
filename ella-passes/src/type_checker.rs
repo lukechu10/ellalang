@@ -7,10 +7,10 @@ use ella_parser::visitor::{walk_expr, walk_stmt, Visitor};
 use ella_source::{Source, SyntaxError};
 use ella_value::BuiltinVars;
 
-use crate::resolve::ResolveResult;
+use crate::resolve::{ResolveResult, Symbol};
 
 /// Represents a builtin type.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BuiltinType {
     Bool,
     Number,
@@ -22,13 +22,16 @@ pub enum BuiltinType {
 }
 
 /// Represents an unique type.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum UniqueType {
     Builtin(BuiltinType),
+    /// Runtime type.
+    Any,
+    /// Error case.
     Unknown,
 }
 
-pub type SymbolTypeTable = HashMap<*const Stmt, UniqueType>;
+pub type SymbolTypeTable = HashMap<*const Symbol, UniqueType>;
 pub type ExprTypeTable = HashMap<*const Expr, UniqueType>;
 
 #[derive(Debug, Clone)]
@@ -72,11 +75,30 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
-    // pub fn type_check_builtin_vars(&mut self, builtin_vars: &BuiltinVars) {
-    //     for (ident, value) in &builtin_vars.values {
-    //         self.symbol_type_table
-    //     }
-    // }
+    pub fn type_check_builtin_vars(&mut self, builtin_vars: &BuiltinVars) {
+        for (ident, _value) in &builtin_vars.values {
+            let symbol = self
+                .resolve_result
+                .lookup_in_accessible_symbols(ident)
+                .unwrap(); // get Symbol for builtin value
+
+            assert!(self
+                .symbol_type_table
+                .insert(symbol.as_ptr() as *const Symbol, UniqueType::Unknown)
+                .is_none());
+        }
+    }
+
+    pub fn type_check_global(&mut self, func: &'a Stmt) {
+        match &func.kind {
+            StmtKind::FnDeclaration { body, .. } => {
+                for stmt in body {
+                    self.visit_stmt(stmt);
+                }
+            }
+            _ => panic!("func is not a StmtKind::FnDeclaration"),
+        }
+    }
 
     pub fn into_type_check_result(self) -> TypeCheckResult {
         TypeCheckResult {
@@ -94,22 +116,17 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
             ExprKind::BoolLit(_) => UniqueType::Builtin(BuiltinType::Bool),
             ExprKind::NumberLit(_) => UniqueType::Builtin(BuiltinType::Number),
             ExprKind::StringLit(_) => UniqueType::Builtin(BuiltinType::String),
-            ExprKind::Identifier(_) => match self.resolve_result.lookup_identifier(expr) {
-                Some(resolved_symbol) => {
-                    dbg!(&resolved_symbol.symbol.borrow().stmt);
-                    self.symbol_type_table
-                        .get(&resolved_symbol.symbol.borrow().stmt)
-                        .unwrap()
-                        .clone()
-                }
+            ExprKind::Identifier(ident) => match self.resolve_result.lookup_identifier(expr) {
+                Some(resolved_symbol) => self
+                    .symbol_type_table
+                    .get(&(resolved_symbol.symbol.as_ptr() as *const Symbol))
+                    .expect(&format!("type of identifier \"{}\"", ident))
+                    .clone(),
                 None => UniqueType::Unknown,
             },
             _ => UniqueType::Unknown, // TODO
         };
-        assert!(self
-            .expr_type_table
-            .insert(expr as *const Expr, ty)
-            .is_none());
+        self.expr_type_table.insert(expr as *const Expr, ty);
     }
 
     fn visit_stmt(&mut self, stmt: &'a Stmt) {
@@ -136,29 +153,43 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                         }
                     },
                     None => {
-                        // TODO: infer type from initializer
                         if let Some(ty) = self.expr_type_table.get(&(initializer as *const Expr)) {
+                            if ty == &UniqueType::Unknown {
+                                self.source.errors.add_error(
+                                    SyntaxError::new(
+                                        "could not infer type for variable",
+                                        stmt.span.clone(),
+                                    )
+                                    .with_help(format!(
+                                        "consider explicitly specifying the type for \"{}\"",
+                                        ident
+                                    )),
+                                );
+                            }
                             ty.clone()
                         } else {
-                            // FIXME: should be unreachable
-                            self.source.errors.add_error(
-                                SyntaxError::new(
-                                    "could not infer type for variable",
-                                    stmt.span.clone(),
-                                )
-                                .with_help(format!(
-                                    "consider explicitly specifying the type for \"{}\"",
-                                    ident
-                                )),
-                            );
-                            UniqueType::Unknown
+                            // FIXME: declaration without initializer (not yet syntactically possible).
+                            unreachable!("declaration without initializer");
                         }
                     }
                 };
-                assert!(self
-                    .symbol_type_table
-                    .insert(stmt as *const Stmt, ty)
-                    .is_none());
+                let symbol = self.resolve_result.lookup_declaration(stmt).unwrap();
+                self.symbol_type_table
+                    .insert(symbol.as_ptr() as *const Symbol, ty);
+            }
+            StmtKind::FnDeclaration {
+                ident: _,
+                params,
+                body: _,
+            } => {
+                let symbol = self.resolve_result.lookup_declaration(stmt).unwrap();
+                self.symbol_type_table
+                    .insert(symbol.as_ptr() as *const Symbol, UniqueType::Unknown);
+
+                for param in params {
+                    // FIXME: give type to param
+                }
+                // FIXME give function proper type
             }
             _ => {}
         }
