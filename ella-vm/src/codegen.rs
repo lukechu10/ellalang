@@ -20,7 +20,7 @@ const DUMP_CHUNK: bool = true;
 pub struct Codegen<'a> {
     chunk: Chunk,
     constant_strings: HashMap<String, Rc<Obj>>,
-    resolve_result: ResolveResult<'a>,
+    resolve_result: &'a ResolveResult,
     /// Every time a new scope is created, a new value is pushed onto the stack.
     /// This is to keep track of how many `pop` instructions to emit when exiting the scope.
     scope_stack: Vec<Vec<Rc<RefCell<Symbol>>>>,
@@ -28,7 +28,7 @@ pub struct Codegen<'a> {
 }
 
 impl<'a> Codegen<'a> {
-    pub fn new(name: String, resolve_result: ResolveResult<'a>, source: &'a Source<'a>) -> Self {
+    pub fn new(name: String, resolve_result: &'a ResolveResult, source: &'a Source<'a>) -> Self {
         Self {
             chunk: Chunk::new(name),
             constant_strings: HashMap::new(),
@@ -125,7 +125,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
         /// Generate codegen for shorthand assignments (e.g. `+=`).
         macro_rules! gen_op_assign {
             ($instr: expr, $lhs: expr, $rhs: expr, $line: expr) => {{
-                let resolved_symbol = *self.resolve_result.lookup_identifier($lhs).unwrap();
+                let resolved_symbol = self.resolve_result.lookup_identifier($lhs).unwrap();
 
                 // load value
                 if resolved_symbol.is_global {
@@ -186,7 +186,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 self.chunk.write_chunk(constant, line);
             }
             ExprKind::Identifier(ident) => {
-                let resolved_symbol = *self.resolve_result.lookup_identifier(expr).unwrap();
+                let resolved_symbol = self.resolve_result.lookup_identifier(expr).unwrap();
 
                 if resolved_symbol.is_global {
                     self.chunk.write_chunk(OpCode::LdGlobal, line);
@@ -243,7 +243,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                         self.visit_expr(rhs);
 
                         let resolved_symbol =
-                            *self.resolve_result.lookup_identifier(lhs.as_ref()).unwrap();
+                            self.resolve_result.lookup_identifier(lhs.as_ref()).unwrap();
 
                         if resolved_symbol.is_global {
                             self.chunk.write_chunk(OpCode::StGlobal, line);
@@ -304,7 +304,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
 
                 // Create a new `Codegen` instance, codegen the function, and add the chunk to the `ObjKind::Fn`.
                 let fn_chunk = {
-                    let mut cg = Codegen::new(ident.clone(), self.resolve_result, self.source);
+                    let mut cg = Codegen::new(ident.clone(), &self.resolve_result, self.source);
                     for stmt in body {
                         cg.visit_stmt(stmt);
                     }

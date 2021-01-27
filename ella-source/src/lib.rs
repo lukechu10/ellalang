@@ -1,16 +1,20 @@
 //! Source code representation and error management.
 
-use std::{cell::RefCell, fmt, ops::Range};
+use std::cell::RefCell;
+use std::fmt;
+use std::ops::Range;
+use std::rc::Rc;
 
 use console::style;
 
 /// Represents source code.
+#[derive(Clone)]
 pub struct Source<'a> {
     /// Original source code.
     pub content: &'a str,
     lines: Vec<usize>,
     /// Accumulated errors.
-    pub errors: ErrorReporter,
+    pub errors: Rc<ErrorReporter>,
 }
 
 impl<'a> Source<'a> {
@@ -19,7 +23,7 @@ impl<'a> Source<'a> {
         Self {
             content,
             lines: get_newline_pos(content),
-            errors: ErrorReporter::new(),
+            errors: Rc::new(ErrorReporter::new()),
         }
     }
 

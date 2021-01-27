@@ -14,28 +14,26 @@ pub fn interpret(source: &str) {
     let builtin_vars = default_builtin_vars();
 
     let dummy_source = "".into();
-    let mut resolver = Resolver::new(&dummy_source);
+    let mut resolver = Resolver::new(dummy_source);
     resolver.resolve_builtin_vars(&builtin_vars);
-    let mut resolve_result = resolver.resolve_result();
-    let accessible_symbols = resolver.accessible_symbols();
+    let mut resolve_result = resolver.into_resolve_result();
 
     let mut vm = Vm::new(&builtin_vars);
-    let mut codegen = Codegen::new("<global>".to_string(), resolve_result, &source);
+    let mut codegen = Codegen::new("<global>".to_string(), &resolve_result, &source);
     codegen.codegen_builtin_vars(&builtin_vars);
     vm.interpret(codegen.into_inner_chunk()); // load built in functions into memory
 
     let mut parser = Parser::new(&source);
     let ast = parser.parse_program();
 
-    let mut resolver =
-        Resolver::new_with_existing_accessible_symbols(&source, accessible_symbols.clone());
+    let mut resolver = Resolver::new_with_existing_resolve_result(source.clone(), resolve_result);
     resolver.resolve_top_level(&ast);
-    resolve_result = resolver.resolve_result();
+    resolve_result = resolver.into_resolve_result();
 
     eprintln!("{}", source);
     assert!(source.has_no_errors());
 
-    let mut codegen = Codegen::new("<global>".to_string(), resolve_result, &source);
+    let mut codegen = Codegen::new("<global>".to_string(), &resolve_result, &source);
 
     codegen.codegen_function(&ast);
 

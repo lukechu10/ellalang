@@ -99,7 +99,7 @@ pub enum StmtKind {
     /// Error token. Used for error recovery.
     Error,
     /// A lambda "statement". There are no fields as this is only a marker, stored inside [`ExprKind::Lambda`] for variable resolution.
-    /// This should never be visited in a [`Visitor`].
+    /// This should never be visited in a [`crate::visitor::Visitor`].
     Lambda,
 }
 
