@@ -510,4 +510,101 @@ fn foo(x, y, z) {}
 foo(1, 2); // error"#,
         );
     }
+
+    #[test]
+    #[should_panic]
+    fn wrong_type_in_argument() {
+        interpret(
+            r#"
+assert(1); // error, assert takes a bool"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn add() {
+        interpret(
+            r#"
+1 + "a"; // error, cannot add string to number"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn add2() {
+        interpret(
+            r#"
+"a" + 1; // error, cannot add number to string"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn neg() {
+        interpret(
+            r#"
+"a" - 1; // error"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn mul() {
+        interpret(
+            r#"
+"a" * 1; // error"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn div() {
+        interpret(
+            r#"
+"a" / 1; // error"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn cmp() {
+        interpret(r#"
+"1" == 1; // error"#);
+    }
+
+    #[test]
+    #[should_panic]
+    fn logical_not() {
+        interpret(r#"
+!1; // error, should be bool"#);
+    }
+
+    #[test]
+    #[should_panic]
+    fn unary_minus() {
+        interpret(r#"
+-true; // error, should be number"#);
+    }
+
+    #[test]
+    #[should_panic]
+    fn unknown_type() {
+        interpret(r#"
+let x: Foo = 1; // error, Foo unknown"#);
+    }
+
+    #[test]
+    #[should_panic]
+    fn wrong_type_for_initializer() {
+        interpret(r#"
+let x: bool = 1; // error, expected bool"#);
+    }
+
+    #[test]
+    #[should_panic]
+    fn wrong_type_for_initializer2() {
+        interpret(r#"
+let x = 1; // infer to be number
+let y: bool = x; // error, expected bool"#);
+    }
 }
