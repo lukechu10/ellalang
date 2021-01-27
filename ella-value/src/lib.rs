@@ -48,7 +48,6 @@ impl BuiltinVars {
     }
 }
 
-
 /// Represents a builtin type.
 #[derive(Debug, Clone, PartialEq)]
 pub enum BuiltinType {
@@ -68,7 +67,28 @@ pub enum UniqueType {
     /// Runtime type.
     Any,
     /// Error case.
+    /// Behaves like `Any` case during type checking to prevent cascading errors.
     Unknown,
+}
+
+impl UniqueType {
+    /// # Example
+    /// ```
+    /// use ella_value::{BuiltinType, UniqueType};
+    /// // Can always cast to same type (string -> string).
+    /// assert!(BuiltinType::String.into().can_cast_to(BuiltinType::String.into()));
+    /// 
+    /// // Any and unknown can accept any type.
+    /// assert!(BuiltinType::Number.into().can_cast_to(BuiltinType::Any.into()));
+    /// assert!(BuiltinType::Number.into().can_cast_to(BuiltinType::Unknown.into()));
+    /// ```
+    pub fn can_implicit_cast_to(&self, other: &Self) -> bool {
+        match other {
+            Self::Builtin(_) => self == other,
+            Self::Any => true,
+            Self::Unknown => true,
+        }
+    }
 }
 
 impl From<BuiltinType> for UniqueType {

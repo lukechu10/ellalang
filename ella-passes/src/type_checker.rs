@@ -125,13 +125,13 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                     }
                     // check params type
                     for i in 0..params.len() {
-                        let param_ty = params[i].clone();
+                        let param_ty = &params[i];
                         let arg_ty = self
                             .expr_type_table
                             .get(&(&args[i] as *const Expr))
                             .unwrap();
 
-                        if &param_ty != arg_ty {
+                        if !arg_ty.can_implicit_cast_to(param_ty) {
                             self.source.errors.add_error(SyntaxError::new(
                                 format!(
                                     "wrong type in argument position {}",
