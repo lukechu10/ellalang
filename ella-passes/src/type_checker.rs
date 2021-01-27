@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use ella_parser::ast::{Expr, ExprKind, Stmt, StmtKind};
+use ella_parser::lexer::Token;
 use ella_parser::visitor::{walk_expr, walk_stmt, Visitor};
 use ella_source::{Source, SyntaxError};
 use ella_value::BuiltinVars;
@@ -16,8 +17,8 @@ pub enum BuiltinType {
     Number,
     String,
     Function {
-        params: Vec<BuiltinType>,
-        ret: Box<BuiltinType>,
+        params: Vec<UniqueType>,
+        ret: Box<UniqueType>,
     },
 }
 
@@ -117,18 +118,159 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
             ExprKind::NumberLit(_) => UniqueType::Builtin(BuiltinType::Number),
             ExprKind::StringLit(_) => UniqueType::Builtin(BuiltinType::String),
             ExprKind::Identifier(ident) => match self.resolve_result.lookup_identifier(expr) {
-                Some(resolved_symbol) => {
-                    self.symbol_type_table
-                        .get(&(resolved_symbol.symbol.as_ptr() as *const Symbol))
-                        .expect(&format!(
-                            "type of identifier \"{}\" at {:?}",
-                            ident, expr.span
-                        ))
-                        .clone()
-                }
+                Some(resolved_symbol) => self
+                    .symbol_type_table
+                    .get(&(resolved_symbol.symbol.as_ptr() as *const Symbol))
+                    .expect(&format!(
+                        "type of identifier \"{}\" at {:?}",
+                        ident, expr.span
+                    ))
+                    .clone(),
                 None => UniqueType::Unknown,
             },
-            _ => UniqueType::Unknown, // TODO
+            ExprKind::FnCall { callee, args } => {
+                let callee_ty = self
+                    .expr_type_table
+                    .get(&(callee.as_ref() as *const Expr))
+                    .unwrap();
+                if let UniqueType::Builtin(BuiltinType::Function { params, ret }) = callee_ty {
+                    // check arity
+                    if args.len() != params.len() {
+                        self.source.errors.add_error(SyntaxError::new(
+                            format!(
+                                "expected {} argument(s), found {}",
+                                params.len(),
+                                args.len()
+                            ),
+                            expr.span.clone(),
+                        ));
+                    }
+                    ret.as_ref().clone()
+                } else {
+                    self.source.errors.add_error(SyntaxError::new(
+                        "value is not a function",
+                        expr.span.clone(),
+                    ));
+                    UniqueType::Unknown
+                }
+            }
+            ExprKind::Binary { lhs, op, rhs } => {
+                let lhs_ty = self
+                    .expr_type_table
+                    .get(&(lhs.as_ref() as *const Expr))
+                    .unwrap();
+                let rhs_ty = self
+                    .expr_type_table
+                    .get(&(rhs.as_ref() as *const Expr))
+                    .unwrap();
+
+                match op {
+                    Token::Plus => {
+                        if lhs_ty == &UniqueType::Builtin(BuiltinType::Number)
+                            && rhs_ty == &UniqueType::Builtin(BuiltinType::Number)
+                        {
+                            UniqueType::Builtin(BuiltinType::Number)
+                        } else if lhs_ty == &UniqueType::Builtin(BuiltinType::String)
+                            && rhs_ty == &UniqueType::Builtin(BuiltinType::String)
+                        {
+                            UniqueType::Builtin(BuiltinType::String)
+                        } else {
+                            self.source.errors.add_error(SyntaxError::new(
+                                "expected numbers or strings for addition",
+                                expr.span.clone(),
+                            ));
+                            UniqueType::Unknown
+                        }
+                    }
+                    Token::Minus => {
+                        if lhs_ty != &UniqueType::Builtin(BuiltinType::Number)
+                            || rhs_ty != &UniqueType::Builtin(BuiltinType::Number)
+                        {
+                            self.source.errors.add_error(SyntaxError::new(
+                                "expected numbers for subtraction",
+                                expr.span.clone(),
+                            ));
+                        }
+                        UniqueType::Builtin(BuiltinType::Number)
+                    }
+                    Token::Asterisk => {
+                        if lhs_ty != &UniqueType::Builtin(BuiltinType::Number)
+                            || rhs_ty != &UniqueType::Builtin(BuiltinType::Number)
+                        {
+                            self.source.errors.add_error(SyntaxError::new(
+                                "expected numbers for multiplication",
+                                expr.span.clone(),
+                            ));
+                        }
+                        UniqueType::Builtin(BuiltinType::Number)
+                    }
+                    Token::Slash => {
+                        if lhs_ty != &UniqueType::Builtin(BuiltinType::Number)
+                            || rhs_ty != &UniqueType::Builtin(BuiltinType::Number)
+                        {
+                            self.source.errors.add_error(SyntaxError::new(
+                                "expected numbers for division",
+                                expr.span.clone(),
+                            ));
+                        }
+                        UniqueType::Builtin(BuiltinType::Number)
+                    }
+                    Token::Equals
+                    | Token::PlusEquals
+                    | Token::MinusEquals
+                    | Token::AsteriskEquals
+                    | Token::SlashEquals => {
+                        // result of assignment is new value
+                        // TODO: check if operation is valid
+                        lhs_ty.clone()
+                    }
+                    Token::EqualsEquals
+                    | Token::NotEquals
+                    | Token::LessThan
+                    | Token::LessThanEquals
+                    | Token::GreaterThan
+                    | Token::GreaterThanEquals => {
+                        if lhs_ty != rhs_ty {
+                            self.source.errors.add_error(SyntaxError::new("comparison operators can only be used on two values of the same type", expr.span.clone()));
+                        }
+                        UniqueType::Builtin(BuiltinType::Bool)
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            ExprKind::Unary { op, arg } => {
+                let arg_ty = self
+                    .expr_type_table
+                    .get(&(arg.as_ref() as *const Expr))
+                    .unwrap();
+                match op {
+                    Token::LogicalNot => {
+                        if arg_ty != &UniqueType::Builtin(BuiltinType::Bool) {
+                            self.source.errors.add_error(SyntaxError::new(
+                                "logical not can only be used on a bool",
+                                expr.span.clone(),
+                            ));
+                        }
+                        UniqueType::Builtin(BuiltinType::Bool)
+                    }
+                    Token::Minus => {
+                        if arg_ty != &UniqueType::Builtin(BuiltinType::Number) {
+                            self.source.errors.add_error(SyntaxError::new(
+                                "unary minus can only be used on a number",
+                                expr.span.clone(),
+                            ));
+                        }
+                        UniqueType::Builtin(BuiltinType::Number)
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            ExprKind::Lambda {
+                inner_stmt: _,
+                params: _,
+                body: _,
+            } => todo!(),
+            ExprKind::Error => UniqueType::Unknown,
         };
         self.expr_type_table.insert(expr as *const Expr, ty);
     }
@@ -194,8 +336,13 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                 body: _,
             } => {
                 let symbol = self.resolve_result.lookup_declaration(stmt).unwrap();
+
+                let ty = UniqueType::Builtin(BuiltinType::Function {
+                    params: vec![UniqueType::Unknown; params.len()],
+                    ret: Box::new(UniqueType::Unknown),
+                });
                 self.symbol_type_table
-                    .insert(symbol.as_ptr() as *const Symbol, UniqueType::Unknown);
+                    .insert(symbol.as_ptr() as *const Symbol, ty);
 
                 for param in params {
                     self.visit_stmt(param);
