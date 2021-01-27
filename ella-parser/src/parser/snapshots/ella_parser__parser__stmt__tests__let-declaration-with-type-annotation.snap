@@ -1,6 +1,6 @@
 ---
 source: ella-parser/src/parser/stmt.rs
-expression: "stmt(\"let x = 2;\")"
+expression: "stmt(\"let x: u32 = 2;\")"
 ---
 Stmt {
     kind: LetDeclaration {
@@ -9,9 +9,14 @@ Stmt {
             kind: NumberLit(
                 2.0,
             ),
-            span: 8..9,
+            span: 13..14,
         },
-        ty: None,
+        ty: Some(
+            TypePath {
+                ident: "u32",
+                span: 7..10,
+            },
+        ),
     },
-    span: 0..10,
+    span: 0..15,
 }

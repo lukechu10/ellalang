@@ -3,22 +3,103 @@
 use std::rc::Rc;
 
 use ella_value::object::{Obj, ObjKind};
-use ella_value::{BuiltinVars, Value};
+use ella_value::{BuiltinType, BuiltinVars, UniqueType, Value};
 
 #[allow(dead_code)] // This appears to be a bug with rustc. These functions are used in both main.rs and lib.rs
 
 /// Returns the default [`BuiltinVars`] that should be used.
 pub fn default_builtin_vars() -> BuiltinVars {
     let mut builtin_vars = BuiltinVars::new();
-    builtin_vars.add_native_fn("print", &print, 1);
-    builtin_vars.add_native_fn("println", &println, 1);
-    builtin_vars.add_native_fn("readln", &readln, 0);
-    builtin_vars.add_native_fn("assert", &assert, 1);
-    builtin_vars.add_native_fn("assert_eq", &assert_eq, 2);
-    builtin_vars.add_native_fn("is_nan", &is_nan, 1);
-    builtin_vars.add_native_fn("parse_number", &parse_number, 1);
-    builtin_vars.add_native_fn("clock", &clock, 0);
-    builtin_vars.add_native_fn("str", &str, 1);
+    builtin_vars.add_native_fn(
+        "print",
+        &print,
+        1,
+        BuiltinType::Fn {
+            params: vec![UniqueType::Any],
+            ret: Box::new(BuiltinType::Bool.into()),
+        }
+        .into(),
+    );
+    builtin_vars.add_native_fn(
+        "println",
+        &println,
+        1,
+        BuiltinType::Fn {
+            params: vec![UniqueType::Any],
+            ret: Box::new(BuiltinType::Bool.into()),
+        }
+        .into(),
+    );
+    builtin_vars.add_native_fn(
+        "readln",
+        &readln,
+        0,
+        BuiltinType::Fn {
+            params: Vec::new(),
+            ret: Box::new(BuiltinType::String.into()),
+        }
+        .into(),
+    );
+    builtin_vars.add_native_fn(
+        "assert",
+        &assert,
+        1,
+        BuiltinType::Fn {
+            params: vec![BuiltinType::Bool.into()],
+            ret: Box::new(BuiltinType::Bool.into()),
+        }
+        .into(),
+    );
+    builtin_vars.add_native_fn(
+        "assert_eq",
+        &assert_eq,
+        2,
+        BuiltinType::Fn {
+            params: vec![UniqueType::Any, UniqueType::Any],
+            ret: Box::new(BuiltinType::Bool.into()),
+        }
+        .into(),
+    );
+    builtin_vars.add_native_fn(
+        "is_nan",
+        &is_nan,
+        1,
+        BuiltinType::Fn {
+            params: vec![BuiltinType::Number.into()],
+            ret: Box::new(BuiltinType::Bool.into()),
+        }
+        .into(),
+    );
+    builtin_vars.add_native_fn(
+        "parse_number",
+        &parse_number,
+        1,
+        BuiltinType::Fn {
+            params: vec![UniqueType::Any],
+            ret: Box::new(BuiltinType::Number.into()),
+        }
+        .into(),
+    );
+    builtin_vars.add_native_fn(
+        "clock",
+        &clock,
+        0,
+        BuiltinType::Fn {
+            params: Vec::new(),
+            ret: Box::new(BuiltinType::Number.into()),
+        }
+        .into(),
+    );
+    builtin_vars.add_native_fn(
+        "str",
+        &str,
+        1,
+        BuiltinType::Fn {
+            params: vec![UniqueType::Any],
+            ret: Box::new(BuiltinType::String.into()),
+        }
+        .into(),
+    );
     builtin_vars
 }
 

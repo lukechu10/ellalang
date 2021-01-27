@@ -1,4 +1,4 @@
-use crate::ast::StmtKind;
+use crate::ast::{StmtKind, TypePath};
 
 use super::*;
 
@@ -123,6 +123,27 @@ impl<'a> Parser<'a> {
         StmtKind::WhileStmt { condition, body }.with_span(lo..self.node_end())
     }
 
+    /// Parses an optional type annotation. A type annotation is always preceded by a `:` colon token.
+    fn parse_optional_type_annotation(&mut self) -> Option<TypePath> {
+        if self.eat(Token::Colon) {
+            let lo = self.node_start();
+            let ident = if let Token::Identifier(ref ident) = self.current_token {
+                let ident = ident.clone();
+                self.next();
+                ident
+            } else {
+                self.unexpected();
+                return None;
+            };
+            Some(TypePath {
+                ident,
+                span: lo..self.node_end(),
+            })
+        } else {
+            None
+        }
+    }
+
     fn parse_let_declaration(&mut self) -> Stmt {
         let lo = self.node_start();
 
@@ -135,15 +156,23 @@ impl<'a> Parser<'a> {
             self.unexpected();
             return StmtKind::Error.with_span(lo..self.node_end());
         };
+
+        let ty = self.parse_optional_type_annotation();
+
         self.expect(Token::Equals);
         let initializer = self.parse_expr();
         self.expect(Token::Semi);
-        StmtKind::LetDeclaration { ident, initializer }.with_span(lo..self.node_end())
+        StmtKind::LetDeclaration {
+            ident,
+            initializer,
+            ty,
+        }
+        .with_span(lo..self.node_end())
     }
 
     fn parse_fn_declaration(&mut self) -> Stmt {
         let lo = self.node_start();
-        
+
         self.expect(Token::Fn);
         let ident = if let Token::Identifier(ref ident) = self.current_token {
             let ident = ident.clone();
@@ -159,9 +188,10 @@ impl<'a> Parser<'a> {
         if !self.eat(Token::CloseParen) {
             loop {
                 params.push(if let Token::Identifier(ref ident) = self.current_token {
+                    let ident_lo = self.node_start();
                     let ident = ident.clone();
                     self.next();
-                    ident
+                    StmtKind::FnParam { ident }.with_span(ident_lo..self.node_end())
                 } else {
                     self.unexpected();
                     return StmtKind::Error.with_span(lo..self.node_end());
@@ -192,7 +222,8 @@ impl<'a> Parser<'a> {
             body,
             ident,
             params,
-        }.with_span(lo..self.node_end())
+        }
+        .with_span(lo..self.node_end())
     }
 
     fn parse_return_stmt(&mut self) -> Stmt {
@@ -259,6 +290,10 @@ mod tests {
     fn test_let_declaration() {
         assert_debug_snapshot!("let-declaration", stmt("let x = 2;"));
         assert_debug_snapshot!("let-declaration-with-expr", stmt("let x = 1 + 2;"));
+        assert_debug_snapshot!(
+            "let-declaration-with-type-annotation",
+            stmt("let x: u32 = 2;")
+        );
     }
 
     #[test]

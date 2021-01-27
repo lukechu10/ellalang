@@ -38,9 +38,12 @@ pub fn walk_expr<'ast>(visitor: &mut impl Visitor<'ast>, expr: &'ast Expr) {
         ExprKind::Unary { op: _, arg } => visitor.visit_expr(arg),
         ExprKind::Lambda {
             inner_stmt: _,
-            params: _,
+            params,
             body,
         } => {
+            for param in params {
+                visitor.visit_stmt(param);
+            }
             for stmt in body {
                 visitor.visit_stmt(stmt);
             }
@@ -64,12 +67,17 @@ pub fn walk_stmt<'ast>(visitor: &mut impl Visitor<'ast>, stmt: &'ast Stmt) {
         StmtKind::LetDeclaration {
             ident: _,
             initializer,
+            ty: _,
         } => visitor.visit_expr(initializer),
+        StmtKind::FnParam { ident: _ } => {}
         StmtKind::FnDeclaration {
             ident: _,
-            params: _,
+            params,
             body,
-        } => visit_stmt_list!(visitor, body),
+        } => {
+            visit_stmt_list!(visitor, params);
+            visit_stmt_list!(visitor, body);
+        },
         StmtKind::Block(body) => visit_stmt_list!(visitor, body),
         StmtKind::IfElseStmt {
             condition,

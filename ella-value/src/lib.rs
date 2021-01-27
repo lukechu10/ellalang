@@ -16,7 +16,7 @@ use object::{Closure, Function, NativeFn, Obj, ObjKind};
 /// Symbols that are available globally.
 #[derive(Default)]
 pub struct BuiltinVars {
-    pub values: Vec<(String, Value)>,
+    pub values: Vec<(String, Value, UniqueType)>,
 }
 
 impl BuiltinVars {
@@ -25,8 +25,8 @@ impl BuiltinVars {
     }
 
     /// Add a builtin symbol.
-    pub fn add_value(&mut self, ident: String, value: Value) {
-        self.values.push((ident, value));
+    pub fn add_value(&mut self, ident: String, value: Value, ty: UniqueType) {
+        self.values.push((ident, value, ty));
     }
 
     /// Add a builtin native function. Alias for [`Self::add_value`] for simplifying [`ObjKind::NativeFn`] creation.
@@ -35,6 +35,7 @@ impl BuiltinVars {
         ident: impl ToString,
         func: &'static dyn Fn(&mut [Value]) -> Value,
         arity: u32,
+        ty: UniqueType,
     ) {
         let obj = Value::Object(Rc::new(Obj {
             kind: ObjKind::NativeFn(NativeFn {
@@ -43,7 +44,56 @@ impl BuiltinVars {
                 ident: ident.to_string(),
             }),
         }));
-        self.add_value(ident.to_string(), obj);
+        self.add_value(ident.to_string(), obj, ty);
+    }
+}
+
+/// Represents a builtin type.
+#[derive(Debug, Clone, PartialEq)]
+pub enum BuiltinType {
+    Bool,
+    Number,
+    String,
+    Fn {
+        params: Vec<UniqueType>,
+        ret: Box<UniqueType>,
+    },
+}
+
+/// Represents an unique type.
+#[derive(Debug, Clone, PartialEq)]
+pub enum UniqueType {
+    Builtin(BuiltinType),
+    /// Runtime type.
+    Any,
+    /// Error case.
+    /// Behaves like `Any` case during type checking to prevent cascading errors.
+    Unknown,
+}
+
+impl UniqueType {
+    /// # Example
+    /// ```
+    /// use ella_value::{BuiltinType, UniqueType};
+    /// // Can always cast to same type (string -> string).
+    /// assert!(UniqueType::from(BuiltinType::String).can_implicit_cast_to(&BuiltinType::String.into()));
+    /// 
+    /// // Any and unknown can accept any type.
+    /// assert!(UniqueType::from(BuiltinType::Number).can_implicit_cast_to(&UniqueType::Any));
+    /// assert!(UniqueType::from(BuiltinType::Number).can_implicit_cast_to(&UniqueType::Unknown));
+    /// ```
+    pub fn can_implicit_cast_to(&self, other: &Self) -> bool {
+        match other {
+            Self::Builtin(_) => self == other,
+            Self::Any => true,
+            Self::Unknown => true,
+        }
+    }
+}
+
+impl From<BuiltinType> for UniqueType {
+    fn from(ty: BuiltinType) -> Self {
+        Self::Builtin(ty)
     }
 }
 

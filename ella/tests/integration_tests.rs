@@ -113,11 +113,13 @@ local; // not in scope"#,
 
     #[test]
     fn assign_equality_result() {
-        interpret(r#"
+        interpret(
+            r#"
 let x = 1;
 let y = 2;
 let is_eq = x == 2;
-assert(!is_eq);"#);
+assert(!is_eq);"#,
+        );
     }
 }
 
@@ -310,8 +312,9 @@ mod functions {
         fn capture_by_ref() {
             interpret(
                 r#"
-                let globalSet = 0;
-                let globalGet = 0;
+                fn dummy() {}
+                let globalSet = dummy; // dummy function to prevent type errors
+                let globalGet = dummy;
 
                 fn main() {
                     let a = "initial";
@@ -471,5 +474,137 @@ assert_eq(x, 1);"#,
             }
             assert_eq(x, 190);"#,
         );
+    }
+}
+
+/// Test cases designed to trigger to type checker.
+mod type_errors {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn wrong_type_in_assignment() {
+        interpret(
+            r#"
+let x = 0;
+x = true; // error"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn value_not_a_function() {
+        interpret(
+            r#"
+let x = 0;
+x(); // error"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn wrong_number_of_arguments() {
+        interpret(
+            r#"
+fn foo(x, y, z) {}
+foo(1, 2); // error"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn wrong_type_in_argument() {
+        interpret(
+            r#"
+assert(1); // error, assert takes a bool"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn add() {
+        interpret(
+            r#"
+1 + "a"; // error, cannot add string to number"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn add2() {
+        interpret(
+            r#"
+"a" + 1; // error, cannot add number to string"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn neg() {
+        interpret(
+            r#"
+"a" - 1; // error"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn mul() {
+        interpret(
+            r#"
+"a" * 1; // error"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn div() {
+        interpret(
+            r#"
+"a" / 1; // error"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn cmp() {
+        interpret(r#"
+"1" == 1; // error"#);
+    }
+
+    #[test]
+    #[should_panic]
+    fn logical_not() {
+        interpret(r#"
+!1; // error, should be bool"#);
+    }
+
+    #[test]
+    #[should_panic]
+    fn unary_minus() {
+        interpret(r#"
+-true; // error, should be number"#);
+    }
+
+    #[test]
+    #[should_panic]
+    fn unknown_type() {
+        interpret(r#"
+let x: Foo = 1; // error, Foo unknown"#);
+    }
+
+    #[test]
+    #[should_panic]
+    fn wrong_type_for_initializer() {
+        interpret(r#"
+let x: bool = 1; // error, expected bool"#);
+    }
+
+    #[test]
+    #[should_panic]
+    fn wrong_type_for_initializer2() {
+        interpret(r#"
+let x = 1; // infer to be number
+let y: bool = x; // error, expected bool"#);
     }
 }

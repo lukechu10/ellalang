@@ -4,6 +4,14 @@ use std::ops::Range;
 
 use crate::lexer::Token;
 
+/// Represents a type in the source code.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypePath {
+    /// The identifier of the the type.
+    pub ident: String,
+    pub span: Range<usize>,
+}
+
 /// Wrapper around [`ExprKind`]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expr {
@@ -36,7 +44,8 @@ pub enum ExprKind {
     Lambda {
         /// Should always be a [`StmtKind::Lambda`]. Note that this field is only a marker and does not store any data.
         inner_stmt: Box<Stmt>,
-        params: Vec<String>,
+        /// An array of [`Stmt::FnParam`]. Parameters are declarations so they are a separate ast node.
+        params: Vec<Stmt>,
         body: Vec<Stmt>,
     },
     /// Error token. Used for error recovery.
@@ -61,11 +70,20 @@ pub struct Stmt {
 #[derive(Debug, Clone, PartialEq)]
 pub enum StmtKind {
     /// Variable declaration.
-    LetDeclaration { ident: String, initializer: Expr },
+    LetDeclaration {
+        ident: String,
+        initializer: Expr,
+        /// Optional type annotation.
+        ty: Option<TypePath>,
+    },
+    FnParam {
+        ident: String,
+    },
     /// Function declaration.
     FnDeclaration {
         ident: String,
-        params: Vec<String>,
+        /// An array of [`Stmt::FnParam`]. Parameters are declarations so they are a separate ast node.
+        params: Vec<Stmt>,
         body: Vec<Stmt>,
     },
     /// Block statement.
@@ -78,7 +96,10 @@ pub enum StmtKind {
         else_block: Option<Vec<Stmt>>,
     },
     /// While statement.
-    WhileStmt { condition: Expr, body: Vec<Stmt> },
+    WhileStmt {
+        condition: Expr,
+        body: Vec<Stmt>,
+    },
     /// Expression statement (expression with side effect).
     ExprStmt(Expr),
     /// Return statement.
@@ -86,7 +107,7 @@ pub enum StmtKind {
     /// Error token. Used for error recovery.
     Error,
     /// A lambda "statement". There are no fields as this is only a marker, stored inside [`ExprKind::Lambda`] for variable resolution.
-    /// This should never be visited in a [`Visitor`].
+    /// This should never be visited in a [`crate::visitor::Visitor`].
     Lambda,
 }
 

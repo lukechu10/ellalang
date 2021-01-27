@@ -13,31 +13,43 @@ use ella_value::BuiltinVars;
 
 /// Result of running [`Resolver`] pass.
 /// See [`Resolver::resolve_result`].
-#[derive(Debug, Clone, Copy)]
-pub struct ResolveResult<'a> {
-    symbol_table: &'a SymbolTable,
-    resolved_symbol_table: &'a ResolvedSymbolTable,
+#[derive(Debug, Clone)]
+pub struct ResolveResult {
+    symbol_table: SymbolTable,
+    resolved_symbol_table: ResolvedSymbolTable,
+    accessible_symbols: Vec<Rc<RefCell<Symbol>>>
 }
 
-impl<'a> ResolveResult<'a> {
+impl ResolveResult {
     /// Lookup a [`Stmt`] (by reference) to get variable resolution metadata.
-    pub fn lookup_declaration(&self, stmt: &Stmt) -> Option<&'a Rc<RefCell<Symbol>>> {
+    pub fn lookup_declaration(&self, stmt: &Stmt) -> Option<&Rc<RefCell<Symbol>>> {
         self.symbol_table.get(&(stmt as *const Stmt))
     }
 
     /// Lookup a [`Expr`] (by reference) to get variable resolution metadata.
-    pub fn lookup_identifier(&self, expr: &Expr) -> Option<&'a ResolvedSymbol> {
+    pub fn lookup_identifier(&self, expr: &Expr) -> Option<&ResolvedSymbol> {
         self.resolved_symbol_table.get(&(expr as *const Expr))
+    }
+
+    /// Lookup an identifier in the current `accessible_symbols` list.
+    pub fn lookup_in_accessible_symbols(&self, ident: &str) -> Option<&Rc<RefCell<Symbol>>> {
+        for symbol in self.accessible_symbols.iter().rev() {
+            if symbol.borrow().ident == ident {
+                return Some(symbol);
+            }
+        }
+        None
     }
 }
 
 /// Represents a symbol (created using `let`, `fn` declaration statement or lambda expression).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Symbol {
     ident: String,
     scope_depth: u32,
     pub is_captured: bool,
     pub upvalues: Vec<ResolvedUpValue>,
+    pub stmt: *const Stmt,
 }
 
 /// Represents a resolved upvalue (captured variable).
@@ -48,13 +60,14 @@ pub struct ResolvedUpValue {
 }
 
 /// Represents a resolved symbol (identifier or function call expressions).
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ResolvedSymbol {
     /// The offset relative to the current function's offset (`current_func_offset`).
     pub offset: i32,
     /// Optimization to emit `ldglobal` and `stglobal` instructions.
     pub is_global: bool,
     pub is_upvalue: bool,
+    pub symbol: Rc<RefCell<Symbol>>,
 }
 
 /// A [`HashMap`] mapping [`Stmt`]s to [`Symbol`]s.
@@ -77,12 +90,12 @@ pub struct Resolver<'a> {
     current_func_offset: i32,
     /// A stack of current function upvalues.
     function_upvalues: Vec<Vec<ResolvedUpValue>>,
-    source: &'a Source<'a>,
+    source: Source<'a>,
 }
 
 impl<'a> Resolver<'a> {
     /// Create a new empty `Resolver`.
-    pub fn new(source: &'a Source) -> Self {
+    pub fn new(source: Source<'a>) -> Self {
         Self {
             symbol_table: SymbolTable::new(),
             resolved_symbol_table: ResolvedSymbolTable::new(),
@@ -96,30 +109,27 @@ impl<'a> Resolver<'a> {
 
     /// Create a new `Resolver` with existing accessible symbols.
     /// This method is used to implement REPL functionality (for restoring global variables).
-    /// See [`Self::accessible_symbols`].
-    pub fn new_with_existing_accessible_symbols(
-        source: &'a Source,
-        resolved_symbols: Vec<Rc<RefCell<Symbol>>>,
+    /// See [`Self::into_resolve_result`].
+    pub fn new_with_existing_resolve_result(
+        source: Source<'a>,
+        resolve_result: ResolveResult,
     ) -> Self {
         Self {
-            accessible_symbols: resolved_symbols,
+            symbol_table: resolve_result.symbol_table,
+            resolved_symbol_table: resolve_result.resolved_symbol_table,
+            accessible_symbols: resolve_result.accessible_symbols,
             ..Self::new(source)
         }
     }
 
-    /// Creates a [`ResolveResult`].
-    pub fn resolve_result(&self) -> ResolveResult {
+    /// Creates a [`ResolveResult`]. This method is used to implement REPL functionality (for restoring global variables).
+    /// See [`Self::new_with_existing_resolve_result`].
+    pub fn into_resolve_result(self) -> ResolveResult {
         ResolveResult {
-            symbol_table: &self.symbol_table,
-            resolved_symbol_table: &self.resolved_symbol_table,
+            symbol_table: self.symbol_table,
+            resolved_symbol_table: self.resolved_symbol_table,
+            accessible_symbols: self.accessible_symbols,
         }
-    }
-
-    /// Returns the list of accessible symbols.
-    /// This method is used to implement REPL functionality (for restoring global variables).
-    /// See [`Self::new_with_existing_accessible_symbols`].
-    pub fn accessible_symbols(&self) -> &Vec<Rc<RefCell<Symbol>>> {
-        &self.accessible_symbols
     }
 
     /// Enter a scope.
@@ -149,6 +159,11 @@ impl<'a> Resolver<'a> {
             scope_depth: *self.function_scope_depths.last().unwrap(),
             is_captured: false, // not captured by default
             upvalues: Vec::new(),
+            stmt: if let Some(stmt) = stmt {
+                stmt as *const Stmt
+            } else {
+                std::ptr::null()
+            },
         }));
         self.accessible_symbols.push(Rc::clone(&symbol));
         if let Some(stmt) = stmt {
@@ -243,7 +258,7 @@ impl<'a> Resolver<'a> {
 
     /// Resolve builtin variables.
     pub fn resolve_builtin_vars(&mut self, builtin_vars: &BuiltinVars) {
-        for (ident, _value) in &builtin_vars.values {
+        for (ident, _value, _ty) in &builtin_vars.values {
             self.add_symbol(ident.clone(), None);
         }
     }
@@ -271,6 +286,7 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                                 *self.function_scope_depths.last().unwrap(),
                             ) > self
                                 .find_function_scope_depth(symbol.borrow().scope_depth),
+                            symbol: symbol.clone(),
                         },
                     );
                 }
@@ -305,7 +321,7 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                 self.enter_scope();
                 // add arguments
                 for param in params {
-                    self.add_symbol(param.clone(), Some(inner_stmt));
+                    self.visit_stmt(param);
                 }
 
                 for stmt in body {
@@ -322,6 +338,7 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                         is_captured: false,
                         scope_depth: *self.function_scope_depths.last().unwrap(),
                         upvalues: self.function_upvalues.pop().unwrap(),
+                        stmt: inner_stmt.as_ref() as *const Stmt,
                     })),
                 );
 
@@ -335,8 +352,17 @@ impl<'a> Visitor<'a> for Resolver<'a> {
         // Do not use default walking logic.
 
         match &stmt.kind {
-            StmtKind::LetDeclaration { ident, initializer } => {
+            StmtKind::LetDeclaration {
+                ident,
+                initializer,
+                ty: _,
+            } => {
                 self.visit_expr(initializer);
+                self.add_symbol(ident.clone(), Some(stmt));
+            }
+            StmtKind::FnParam {
+                ident
+            } => {
                 self.add_symbol(ident.clone(), Some(stmt));
             }
             StmtKind::FnDeclaration {
@@ -356,7 +382,7 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                 self.enter_scope();
                 // add arguments
                 for param in params {
-                    self.add_symbol(param.clone(), Some(stmt));
+                    self.visit_stmt(param);
                 }
 
                 for stmt in body {
