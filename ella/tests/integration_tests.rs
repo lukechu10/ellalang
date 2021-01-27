@@ -113,11 +113,13 @@ local; // not in scope"#,
 
     #[test]
     fn assign_equality_result() {
-        interpret(r#"
+        interpret(
+            r#"
 let x = 1;
 let y = 2;
 let is_eq = x == 2;
-assert(!is_eq);"#);
+assert(!is_eq);"#,
+        );
     }
 }
 
@@ -471,6 +473,41 @@ assert_eq(x, 1);"#,
                 i = i + 1;
             }
             assert_eq(x, 190);"#,
+        );
+    }
+}
+
+/// Test cases designed to trigger to type checker.
+mod type_errors {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn wrong_type_in_assignment() {
+        interpret(
+            r#"
+let x = 0;
+x = true; // error"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn value_not_a_function() {
+        interpret(
+            r#"
+let x = 0;
+x(); // error"#,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn wrong_number_of_arguments() {
+        interpret(
+            r#"
+fn foo(x, y, z) {}
+foo(1, 2); // error"#,
         );
     }
 }

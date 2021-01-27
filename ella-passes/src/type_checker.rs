@@ -122,9 +122,10 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                             ),
                             expr.span.clone(),
                         ));
+                    } else {
                     }
                     // check params type
-                    for i in 0..params.len() {
+                    for i in 0..params.len().min(args.len()) {
                         let param_ty = &params[i];
                         let arg_ty = self
                             .expr_type_table
@@ -316,7 +317,10 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                             }
                         };
                         // make sure initializer has right type
-                        let initializer_ty = self.expr_type_table.get(&(initializer as *const Expr)).unwrap();
+                        let initializer_ty = self
+                            .expr_type_table
+                            .get(&(initializer as *const Expr))
+                            .unwrap();
                         if !initializer_ty.can_implicit_cast_to(&ty) {
                             self.source.errors.add_error(SyntaxError::new(
                                 "initializer has wrong type",
