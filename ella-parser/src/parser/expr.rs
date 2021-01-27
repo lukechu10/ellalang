@@ -42,9 +42,7 @@ impl<'a> Parser<'a> {
                 self.expect(Token::CloseParen);
                 expr
             }
-            Token::Fn => {
-                self.parse_lambda_expr()
-            }
+            Token::Fn => self.parse_lambda_expr(),
             _ => {
                 let lo = self.node_start();
                 self.next();
@@ -182,9 +180,10 @@ impl<'a> Parser<'a> {
         if !self.eat(Token::CloseParen) {
             loop {
                 params.push(if let Token::Identifier(ref ident) = self.current_token {
+                    let ident_lo = self.node_start();
                     let ident = ident.clone();
                     self.next();
-                    ident
+                    StmtKind::FnParam { ident }.with_span(ident_lo..self.node_end())
                 } else {
                     self.unexpected();
                     return ExprKind::Error.with_span(lo..self.node_end());

@@ -66,11 +66,15 @@ pub fn walk_stmt<'ast>(visitor: &mut impl Visitor<'ast>, stmt: &'ast Stmt) {
             initializer,
             ty: _,
         } => visitor.visit_expr(initializer),
+        StmtKind::FnParam { ident: _ } => {}
         StmtKind::FnDeclaration {
             ident: _,
-            params: _,
+            params,
             body,
-        } => visit_stmt_list!(visitor, body),
+        } => {
+            visit_stmt_list!(visitor, params);
+            visit_stmt_list!(visitor, body);
+        },
         StmtKind::Block(body) => visit_stmt_list!(visitor, body),
         StmtKind::IfElseStmt {
             condition,

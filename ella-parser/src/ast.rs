@@ -44,7 +44,8 @@ pub enum ExprKind {
     Lambda {
         /// Should always be a [`StmtKind::Lambda`]. Note that this field is only a marker and does not store any data.
         inner_stmt: Box<Stmt>,
-        params: Vec<String>,
+        /// An array of [`Stmt::FnParam`]. Parameters are declarations so they are a separate ast node.
+        params: Vec<Stmt>,
         body: Vec<Stmt>,
     },
     /// Error token. Used for error recovery.
@@ -75,10 +76,14 @@ pub enum StmtKind {
         /// Optional type annotation.
         ty: Option<TypePath>,
     },
+    FnParam {
+        ident: String,
+    },
     /// Function declaration.
     FnDeclaration {
         ident: String,
-        params: Vec<String>,
+        /// An array of [`Stmt::FnParam`]. Parameters are declarations so they are a separate ast node.
+        params: Vec<Stmt>,
         body: Vec<Stmt>,
     },
     /// Block statement.
@@ -91,7 +96,10 @@ pub enum StmtKind {
         else_block: Option<Vec<Stmt>>,
     },
     /// While statement.
-    WhileStmt { condition: Expr, body: Vec<Stmt> },
+    WhileStmt {
+        condition: Expr,
+        body: Vec<Stmt>,
+    },
     /// Expression statement (expression with side effect).
     ExprStmt(Expr),
     /// Return statement.

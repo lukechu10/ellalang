@@ -351,6 +351,7 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 self.visit_expr(initializer); // Push value of expression onto top of stack.
                 self.add_symbol(stmt);
             }
+            StmtKind::FnParam { ident: _ } => unreachable!("function params are never visited"),
             StmtKind::FnDeclaration {
                 ident,
                 params,

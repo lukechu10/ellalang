@@ -321,7 +321,7 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                 self.enter_scope();
                 // add arguments
                 for param in params {
-                    self.add_symbol(param.clone(), Some(inner_stmt));
+                    self.visit_stmt(param);
                 }
 
                 for stmt in body {
@@ -360,6 +360,11 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                 self.visit_expr(initializer);
                 self.add_symbol(ident.clone(), Some(stmt));
             }
+            StmtKind::FnParam {
+                ident
+            } => {
+                self.add_symbol(ident.clone(), Some(stmt));
+            }
             StmtKind::FnDeclaration {
                 ident,
                 params,
@@ -377,7 +382,7 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                 self.enter_scope();
                 // add arguments
                 for param in params {
-                    self.add_symbol(param.clone(), Some(stmt));
+                    self.visit_stmt(param);
                 }
 
                 for stmt in body {

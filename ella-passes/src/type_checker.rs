@@ -117,11 +117,15 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
             ExprKind::NumberLit(_) => UniqueType::Builtin(BuiltinType::Number),
             ExprKind::StringLit(_) => UniqueType::Builtin(BuiltinType::String),
             ExprKind::Identifier(ident) => match self.resolve_result.lookup_identifier(expr) {
-                Some(resolved_symbol) => self
-                    .symbol_type_table
-                    .get(&(resolved_symbol.symbol.as_ptr() as *const Symbol))
-                    .expect(&format!("type of identifier \"{}\"", ident))
-                    .clone(),
+                Some(resolved_symbol) => {
+                    self.symbol_type_table
+                        .get(&(resolved_symbol.symbol.as_ptr() as *const Symbol))
+                        .expect(&format!(
+                            "type of identifier \"{}\" at {:?}",
+                            ident, expr.span
+                        ))
+                        .clone()
+                }
                 None => UniqueType::Unknown,
             },
             _ => UniqueType::Unknown, // TODO
@@ -177,6 +181,13 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                 self.symbol_type_table
                     .insert(symbol.as_ptr() as *const Symbol, ty);
             }
+            StmtKind::FnParam { ident: _ } => {
+                // FIXME: give type to param
+                let symbol = self.resolve_result.lookup_declaration(stmt).unwrap();
+
+                self.symbol_type_table
+                    .insert(symbol.as_ptr() as *const Symbol, UniqueType::Unknown);
+            }
             StmtKind::FnDeclaration {
                 ident: _,
                 params,
@@ -187,7 +198,7 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                     .insert(symbol.as_ptr() as *const Symbol, UniqueType::Unknown);
 
                 for param in params {
-                    // FIXME: give type to param
+                    self.visit_stmt(param);
                 }
                 // FIXME give function proper type
             }
