@@ -173,6 +173,29 @@ impl<'a> Vm<'a> {
             }
         }
 
+        macro_rules! gen_unchecked_num_binary_op {
+            ($op: tt, $result: path) => {{
+                let b: Value = self.stack.pop().unwrap();
+                let a: Value = self.stack.pop().unwrap();
+
+                let a = match a {
+                    Value::Number(val) => val,
+                    _ => unsafe { std::hint::unreachable_unchecked() },
+                };
+
+                let b = match b {
+                    Value::Number(val) => val,
+                    _ => unsafe {std::hint::unreachable_unchecked() },
+                };
+
+                self.stack.push($result(a $op b));
+            }};
+
+            ($op: tt) => {
+                gen_unchecked_num_binary_op!($op, Value::Number)
+            }
+        }
+
         while self.ip() < self.code().len() || self.try_implicit_ret() {
             let opcode = self.read_u8();
             let opcode = OpCode::from_u8(opcode).expect("invalid opcode");
@@ -273,6 +296,10 @@ impl<'a> Vm<'a> {
                 OpCode::Sub => gen_num_binary_op!(-),
                 OpCode::Mul => gen_num_binary_op!(*),
                 OpCode::Div => gen_num_binary_op!(/),
+                OpCode::AddF64 => gen_unchecked_num_binary_op!(+),
+                OpCode::SubF64 => gen_unchecked_num_binary_op!(-),
+                OpCode::MulF64 => gen_unchecked_num_binary_op!(*),
+                OpCode::DivF64 => gen_unchecked_num_binary_op!(/),
                 OpCode::Ret => {
                     if self.call_stack.len() <= 1 {
                         return self.runtime_error("Can only use return in a function.");

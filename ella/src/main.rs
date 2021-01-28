@@ -109,7 +109,7 @@ fn repl() {
 
         eprintln!("{}", source);
         if source.has_no_errors() {
-            let mut codegen = Codegen::new("<global>".to_string(), &resolve_result_tmp, &source);
+            let mut codegen = Codegen::new("<global>".to_string(), &resolve_result_tmp, &type_check_result, &source);
 
             codegen.codegen_function(&ast);
 
@@ -154,7 +154,7 @@ fn interpret_file_contents(source: &str) {
     if !source.has_no_errors() {
         eprintln!("{}", source);
     } else {
-        let mut codegen = Codegen::new("<global>".to_string(), &resolve_result, &source);
+        let mut codegen = Codegen::new("<global>".to_string(), &resolve_result, &type_check_result, &source);
 
         codegen.codegen_function(&ast);
 
