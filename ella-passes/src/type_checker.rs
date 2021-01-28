@@ -19,6 +19,12 @@ pub struct TypeCheckResult {
     expr_type_table: ExprTypeTable,
 }
 
+impl TypeCheckResult {
+    pub fn lookup_expr_type(&self, expr: &Expr) -> Option<&UniqueType> {
+        self.expr_type_table.get(&(expr as *const Expr))
+    }
+}
+
 /// Type checking and type inference pass.
 pub struct TypeChecker<'a> {
     resolve_result: &'a ResolveResult,

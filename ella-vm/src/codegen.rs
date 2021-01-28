@@ -7,9 +7,11 @@ use ella_parser::{
     visitor::Visitor,
 };
 use ella_passes::resolve::{ResolveResult, Symbol};
+use ella_passes::type_checker::TypeCheckResult;
 use ella_source::Source;
 use ella_value::chunk::{Chunk, OpCode};
 use ella_value::object::{Function, Obj, ObjKind};
+use ella_value::BuiltinType;
 use ella_value::{BuiltinVars, Value};
 use std::cell::RefCell;
 use std::{collections::HashMap, rc::Rc};
@@ -21,6 +23,7 @@ pub struct Codegen<'a> {
     chunk: Chunk,
     constant_strings: HashMap<String, Rc<Obj>>,
     resolve_result: &'a ResolveResult,
+    typecheck_result: &'a TypeCheckResult,
     /// Every time a new scope is created, a new value is pushed onto the stack.
     /// This is to keep track of how many `pop` instructions to emit when exiting the scope.
     scope_stack: Vec<Vec<Rc<RefCell<Symbol>>>>,
@@ -28,11 +31,17 @@ pub struct Codegen<'a> {
 }
 
 impl<'a> Codegen<'a> {
-    pub fn new(name: String, resolve_result: &'a ResolveResult, source: &'a Source<'a>) -> Self {
+    pub fn new(
+        name: String,
+        resolve_result: &'a ResolveResult,
+        typecheck_result: &'a TypeCheckResult,
+        source: &'a Source<'a>,
+    ) -> Self {
         Self {
             chunk: Chunk::new(name),
             constant_strings: HashMap::new(),
             resolve_result,
+            typecheck_result,
             scope_stack: vec![Vec::new()],
             source,
         }
@@ -122,40 +131,6 @@ impl<'a> Visitor<'a> for Codegen<'a> {
 
         let line = self.source.lookup_line(expr.span.start);
 
-        /// Generate codegen for shorthand assignments (e.g. `+=`).
-        macro_rules! gen_op_assign {
-            ($instr: expr, $lhs: expr, $rhs: expr, $line: expr) => {{
-                let resolved_symbol = self.resolve_result.lookup_identifier($lhs).unwrap();
-
-                // load value
-                if resolved_symbol.is_global {
-                    self.chunk.write_chunk(OpCode::LdGlobal, $line);
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
-                } else if resolved_symbol.is_upvalue {
-                    self.chunk.write_chunk(OpCode::LdUpVal, $line);
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
-                } else {
-                    self.chunk.write_chunk(OpCode::LdLoc, $line);
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
-                }
-
-                self.visit_expr($rhs);
-                self.chunk.write_chunk($instr, $line);
-
-                // store value
-                if resolved_symbol.is_global {
-                    self.chunk.write_chunk(OpCode::StGlobal, $line);
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
-                } else if resolved_symbol.is_upvalue {
-                    self.chunk.write_chunk(OpCode::StUpVal, $line);
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
-                } else {
-                    self.chunk.write_chunk(OpCode::StLoc, $line);
-                    self.chunk.write_chunk(resolved_symbol.offset as u8, $line);
-                }
-            }};
-        }
-
         match &expr.kind {
             ExprKind::NumberLit(val) => {
                 if *val == 0.0 {
@@ -215,6 +190,56 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 self.chunk.write_chunk(arity, line);
             }
             ExprKind::Binary { lhs, op, rhs } => {
+                /// Codegen unchecked version if lhs and rhs are both numbers. Else codegen checked.
+                macro_rules! codegen_num_binary_op {
+                    ($checked: expr, $unchecked: expr) => {{
+                        let lhs_ty = self.typecheck_result.lookup_expr_type(lhs).unwrap();
+                        let rhs_ty = self.typecheck_result.lookup_expr_type(rhs).unwrap();
+                        if lhs_ty == &BuiltinType::Number.into()
+                            && rhs_ty == &BuiltinType::Number.into()
+                        {
+                            self.chunk.write_chunk($unchecked, line);
+                        } else {
+                            self.chunk.write_chunk($checked, line);
+                        }
+                    }};
+                }
+
+                /// Generate codegen for shorthand assignments (e.g. `+=`).
+                /// Codegen unchecked version if lhs and rhs are both numbers. Else codegen checked.
+                macro_rules! codegen_op_assign {
+                    ($checked: expr, $unchecked: expr, $lhs: expr, $rhs: expr) => {{
+                        let resolved_symbol = self.resolve_result.lookup_identifier($lhs).unwrap();
+
+                        // load value
+                        if resolved_symbol.is_global {
+                            self.chunk.write_chunk(OpCode::LdGlobal, line);
+                            self.chunk.write_chunk(resolved_symbol.offset as u8, line);
+                        } else if resolved_symbol.is_upvalue {
+                            self.chunk.write_chunk(OpCode::LdUpVal, line);
+                            self.chunk.write_chunk(resolved_symbol.offset as u8, line);
+                        } else {
+                            self.chunk.write_chunk(OpCode::LdLoc, line);
+                            self.chunk.write_chunk(resolved_symbol.offset as u8, line);
+                        }
+
+                        self.visit_expr($rhs);
+                        codegen_num_binary_op!($checked, $unchecked);
+
+                        // store value
+                        if resolved_symbol.is_global {
+                            self.chunk.write_chunk(OpCode::StGlobal, line);
+                            self.chunk.write_chunk(resolved_symbol.offset as u8, line);
+                        } else if resolved_symbol.is_upvalue {
+                            self.chunk.write_chunk(OpCode::StUpVal, line);
+                            self.chunk.write_chunk(resolved_symbol.offset as u8, line);
+                        } else {
+                            self.chunk.write_chunk(OpCode::StLoc, line);
+                            self.chunk.write_chunk(resolved_symbol.offset as u8, line);
+                        }
+                    }};
+                }
+
                 match op {
                     Token::Equals
                     | Token::PlusEquals
@@ -227,18 +252,10 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                     }
                 }
                 match op {
-                    Token::Plus => {
-                        self.chunk.write_chunk(OpCode::Add, line);
-                    }
-                    Token::Minus => {
-                        self.chunk.write_chunk(OpCode::Sub, line);
-                    }
-                    Token::Asterisk => {
-                        self.chunk.write_chunk(OpCode::Mul, line);
-                    }
-                    Token::Slash => {
-                        self.chunk.write_chunk(OpCode::Div, line);
-                    }
+                    Token::Plus => codegen_num_binary_op!(OpCode::Add, OpCode::AddF64),
+                    Token::Minus => codegen_num_binary_op!(OpCode::Sub, OpCode::SubF64),
+                    Token::Asterisk => codegen_num_binary_op!(OpCode::Mul, OpCode::MulF64),
+                    Token::Slash => codegen_num_binary_op!(OpCode::Div, OpCode::DivF64),
                     Token::Equals => {
                         self.visit_expr(rhs);
 
@@ -256,10 +273,12 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                             self.chunk.write_chunk(resolved_symbol.offset as u8, line);
                         }
                     }
-                    Token::PlusEquals => gen_op_assign!(OpCode::Add, lhs, rhs, line),
-                    Token::MinusEquals => gen_op_assign!(OpCode::Sub, lhs, rhs, line),
-                    Token::AsteriskEquals => gen_op_assign!(OpCode::Mul, lhs, rhs, line),
-                    Token::SlashEquals => gen_op_assign!(OpCode::Div, lhs, rhs, line),
+                    Token::PlusEquals => codegen_op_assign!(OpCode::Add, OpCode::AddF64, lhs, rhs),
+                    Token::MinusEquals => codegen_op_assign!(OpCode::Sub, OpCode::SubF64, lhs, rhs),
+                    Token::AsteriskEquals => {
+                        codegen_op_assign!(OpCode::Mul, OpCode::MulF64, lhs, rhs)
+                    }
+                    Token::SlashEquals => codegen_op_assign!(OpCode::Div, OpCode::DivF64, lhs, rhs),
                     Token::EqualsEquals => {
                         self.chunk.write_chunk(OpCode::Eq, line);
                     }
@@ -304,7 +323,12 @@ impl<'a> Visitor<'a> for Codegen<'a> {
 
                 // Create a new `Codegen` instance, codegen the function, and add the chunk to the `ObjKind::Fn`.
                 let fn_chunk = {
-                    let mut cg = Codegen::new(ident.clone(), &self.resolve_result, self.source);
+                    let mut cg = Codegen::new(
+                        ident.clone(),
+                        &self.resolve_result,
+                        &self.typecheck_result,
+                        self.source,
+                    );
                     for stmt in body {
                         cg.visit_stmt(stmt);
                     }
@@ -363,7 +387,12 @@ impl<'a> Visitor<'a> for Codegen<'a> {
 
                 // Create a new `Codegen` instance, codegen the function, and add the chunk to the `ObjKind::Fn`.
                 let fn_chunk = {
-                    let mut cg = Codegen::new(ident.clone(), self.resolve_result, self.source);
+                    let mut cg = Codegen::new(
+                        ident.clone(),
+                        self.resolve_result,
+                        &self.typecheck_result,
+                        self.source,
+                    );
                     cg.codegen_function(stmt);
                     cg.chunk
                 };
