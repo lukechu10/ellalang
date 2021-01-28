@@ -10,9 +10,70 @@ use std::io::{self, Write};
 
 mod builtin_functions;
 
+/// Returns `true` if the repl input is finished.
+fn repl_input_is_finished(buf: &str) -> bool {
+    let mut paren_count = 0;
+    let mut brace_count = 0;
+
+    for char in buf.chars() {
+        match char {
+            '(' => paren_count += 1,
+            ')' => paren_count -= 1,
+            '{' => brace_count += 1,
+            '}' => brace_count -= 1,
+            _ => {}
+        }
+
+        if paren_count < 0 || brace_count < 0 {
+            return true; // paren_count and brace_count should be >= 0. Otherwise is error.
+        }
+    }
+
+    paren_count == 0 && brace_count == 0
+}
+
+/// Reads a line from the repl input. Automatically detects if input is finished (balanced paren and brace operators) and prompts user for second line if not.
+fn get_repl_input() -> String {
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
+
+    let mut buf = String::new();
+    // Current indentation level. Incremented when last character is '(' or '{'. Decremented when string contains ')' or '}'.
+    let mut indent: i32 = 0;
+    match stdin.read_line(&mut buf) {
+        Ok(_) => {}
+        Err(err) => {
+            eprintln!("Error while reading input: {}", err);
+        }
+    } // initial input
+
+    while !repl_input_is_finished(&buf) {
+        let mut tmp = String::new();
+
+        print!("{} ", ".".repeat((5 + (4 * indent)) as usize));
+        stdout.flush().unwrap();
+        match stdin.read_line(&mut tmp) {
+            Ok(_) => {}
+            Err(err) => {
+                eprintln!("Error while reading input: {}", err);
+            }
+        }
+
+        if tmp.find(|c| c == '(' || c == '{').is_some() {
+            indent += 1;
+        }
+        if tmp.find(|c| c == ')' || c == '}').is_some() {
+            indent -= std::cmp::max(1, 0); // at least 0
+        }
+
+        buf += tmp.as_str();
+    }
+
+    buf
+}
+
 fn repl() -> ! {
     let mut stdout = io::stdout();
-    let stdin = io::stdin();
 
     let builtin_vars = default_builtin_vars();
 
@@ -33,9 +94,7 @@ fn repl() -> ! {
     loop {
         print!("> ");
         stdout.flush().unwrap();
-
-        let mut input = String::new();
-        stdin.read_line(&mut input).unwrap();
+        let input = get_repl_input();
 
         let source = input.as_str().into();
         let mut parser = Parser::new(&source);
@@ -138,5 +197,23 @@ fn main() {
             Ok(contents) => interpret_file_contents(&contents),
             Err(err) => eprintln!("Error: {}", err),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_repl_input_is_finished() {
+        // finished
+        assert!(repl_input_is_finished(r#"(({}))"#));
+        assert!(repl_input_is_finished(r#"(({123;}))"#));
+        assert!(repl_input_is_finished(r#"{(})"#)); // finished even with bad order
+
+        // not finished
+        assert!(!repl_input_is_finished(r#"(({123;})"#));
+        assert!(!repl_input_is_finished(r#"(({123;"#));
+        assert!(!repl_input_is_finished(r#"(({"#));
     }
 }
