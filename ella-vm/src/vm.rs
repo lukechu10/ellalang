@@ -188,14 +188,14 @@ impl<'a> Vm<'a> {
                 OpCode::Ld0 => self.stack.push(Value::Number(0.0)),
                 OpCode::Ld1 => self.stack.push(Value::Number(1.0)),
                 OpCode::LdLoc => {
-                    let local_index = self.read_u8() + self.frame().frame_pointer as u8;
-                    let local = self.stack[local_index as usize].clone();
+                    let local_index = self.read_u8() as usize + self.frame().frame_pointer;
+                    let local = self.stack[local_index].clone();
                     self.stack.push(local);
                 }
                 OpCode::StLoc => {
-                    let local_index = self.read_u8() + self.frame().frame_pointer as u8;
+                    let local_index = self.read_u8() as usize + self.frame().frame_pointer;
                     let value = self.stack.last().unwrap().clone();
-                    self.stack[local_index as usize] = value;
+                    self.stack[local_index] = value;
                 }
                 OpCode::LdGlobal => {
                     let index = self.read_u8();
