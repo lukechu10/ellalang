@@ -1,0 +1,6 @@
+fn recurse(x) {
+    println(x);
+    return recurse(x + 1);
+}
+
+println(recurse(0));
