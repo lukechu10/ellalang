@@ -72,7 +72,7 @@ fn get_repl_input() -> String {
     buf
 }
 
-fn repl() -> ! {
+fn repl() {
     let mut stdout = io::stdout();
 
     let builtin_vars = default_builtin_vars();
@@ -95,6 +95,10 @@ fn repl() -> ! {
         print!("> ");
         stdout.flush().unwrap();
         let input = get_repl_input();
+
+        if input.trim() == ".exit" {
+            return; // exit repl
+        }
 
         let source = input.as_str().into();
         let mut parser = Parser::new(&source);
