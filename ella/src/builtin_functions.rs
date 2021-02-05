@@ -11,7 +11,6 @@ use ella_vm::codegen::Codegen;
 use ella_vm::vm::Vm;
 
 #[allow(dead_code)] // This appears to be a bug with rustc. These functions are used in both main.rs and lib.rs
-
 /// Returns the default [`BuiltinVars`] that should be used.
 pub fn default_builtin_vars() -> BuiltinVars {
     let mut builtin_vars = BuiltinVars::new();
@@ -122,7 +121,12 @@ pub fn builtin_initial_state<'a>(
     let type_check_result = type_checker.into_type_check_result();
 
     let mut vm = Vm::new(&builtin_vars);
-    let mut codegen = Codegen::new("<global>".to_string(), &resolve_result, &dummy_source);
+    let mut codegen = Codegen::new(
+        "<global>".to_string(),
+        &resolve_result,
+        &type_check_result,
+        &dummy_source,
+    );
     codegen.codegen_builtin_vars(&builtin_vars);
     vm.interpret(codegen.into_inner_chunk()); // load built in functions into memory
 

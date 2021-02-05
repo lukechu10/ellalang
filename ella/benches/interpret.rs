@@ -4,13 +4,14 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use ella::builtin_functions::{builtin_initial_state, default_builtin_vars};
 use ella_parser::parser::Parser;
 use ella_passes::resolve::Resolver;
+use ella_passes::type_checker::TypeChecker;
 use ella_value::chunk::Chunk;
 use ella_value::BuiltinVars;
 use ella_vm::codegen::Codegen;
 use ella_vm::vm::Vm;
 
 fn codegen_str<'a>(source: &str, builtin_vars: &'a BuiltinVars) -> (Chunk, Vm<'a>) {
-    let (mut resolve_result, mut _type_check_result, vm) = builtin_initial_state(&builtin_vars);
+    let (mut resolve_result, mut type_check_result, vm) = builtin_initial_state(&builtin_vars);
 
     let source = source.into();
     let mut parser = Parser::new(&source);
@@ -20,10 +21,20 @@ fn codegen_str<'a>(source: &str, builtin_vars: &'a BuiltinVars) -> (Chunk, Vm<'a
     resolver.resolve_top_level(&ast);
     resolve_result = resolver.into_resolve_result();
 
+    let mut type_checker =
+        TypeChecker::new_with_type_check_result(&resolve_result, source.clone(), type_check_result);
+    type_checker.type_check_global(&ast);
+    type_check_result = type_checker.into_type_check_result();
+
     eprintln!("{}", source);
     assert!(source.has_no_errors());
 
-    let mut codegen = Codegen::new("<global>".to_string(), &resolve_result, &source);
+    let mut codegen = Codegen::new(
+        "<global>".to_string(),
+        &resolve_result,
+        &type_check_result,
+        &source,
+    );
 
     codegen.codegen_function(&ast);
 

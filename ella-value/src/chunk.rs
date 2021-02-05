@@ -54,6 +54,14 @@ pub enum OpCode {
     Sub = 4,
     Mul = 5,
     Div = 6,
+    /// Unchecked version of `add`.
+    AddF64 = 100,
+    /// Unchecked version of `sub`.
+    SubF64 = 101,
+    /// Unchecked version of `mul`.
+    MulF64 = 102,
+    /// Unchecked version of `div`.
+    DivF64 = 103,
     /// Returns the last value on the stack.
     /// *1 byte*
     Ret = 7,

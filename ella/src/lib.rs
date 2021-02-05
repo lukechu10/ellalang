@@ -32,7 +32,7 @@ pub fn interpret(source: &str) {
     eprintln!("{}", source);
     assert!(source.has_no_errors());
 
-    let mut codegen = Codegen::new("<global>".to_string(), &resolve_result, &source);
+    let mut codegen = Codegen::new("<global>".to_string(), &resolve_result, &type_check_result, &source);
 
     codegen.codegen_function(&ast);
 
