@@ -174,7 +174,7 @@ fn main() -> Result<()> {
     } else {
         let path = std::env::args().nth(1).unwrap();
         let contents = std::fs::read_to_string(path.as_str())
-            .context(format!("File {} does not exist.", path))?;
+            .context(format!("Failed to read '{}'", path))?;
         interpret_file_contents(&contents)
     }
 
