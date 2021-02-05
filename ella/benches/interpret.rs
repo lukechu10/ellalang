@@ -1,32 +1,22 @@
 //! Benchmark VM interpretation
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use ella::builtin_functions::default_builtin_vars;
+use ella::builtin_functions::{builtin_initial_state, default_builtin_vars};
 use ella_parser::parser::Parser;
 use ella_passes::resolve::Resolver;
-use ella_source::Source;
 use ella_value::chunk::Chunk;
 use ella_value::BuiltinVars;
 use ella_vm::codegen::Codegen;
 use ella_vm::vm::Vm;
 
 fn codegen_str<'a>(source: &str, builtin_vars: &'a BuiltinVars) -> (Chunk, Vm<'a>) {
-    let dummy_source: Source = "".into();
-    let mut resolver = Resolver::new(dummy_source.clone());
-    resolver.resolve_builtin_vars(&builtin_vars);
-    let mut resolve_result = resolver.into_resolve_result();
-
-    let mut vm = Vm::new(&builtin_vars);
-    let mut codegen = Codegen::new("<global>".to_string(), &resolve_result, &dummy_source);
-    codegen.codegen_builtin_vars(&builtin_vars);
-    vm.interpret(codegen.into_inner_chunk()); // load built in functions into memory
+    let (mut resolve_result, mut _type_check_result, vm) = builtin_initial_state(&builtin_vars);
 
     let source = source.into();
     let mut parser = Parser::new(&source);
     let ast = parser.parse_program();
 
-    let mut resolver =
-        Resolver::new_with_existing_resolve_result(source.clone(), resolve_result);
+    let mut resolver = Resolver::new_with_existing_resolve_result(source.clone(), resolve_result);
     resolver.resolve_top_level(&ast);
     resolve_result = resolver.into_resolve_result();
 

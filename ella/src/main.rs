@@ -1,10 +1,11 @@
+use anyhow::{Context, Result};
+use builtin_functions::builtin_initial_state;
 use ella::builtin_functions::default_builtin_vars;
 use ella_parser::parser::Parser;
 use ella_passes::resolve::Resolver;
 use ella_passes::type_checker::TypeChecker;
-use ella_source::Source;
+use ella_vm::codegen::Codegen;
 use ella_vm::vm::InterpretResult;
-use ella_vm::{codegen::Codegen, vm::Vm};
 
 use std::io::{self, Write};
 
@@ -77,19 +78,7 @@ fn repl() {
 
     let builtin_vars = default_builtin_vars();
 
-    let dummy_source: Source = "".into();
-    let mut resolver = Resolver::new(dummy_source.clone());
-    resolver.resolve_builtin_vars(&builtin_vars);
-    let mut resolve_result = resolver.into_resolve_result();
-
-    let mut type_checker = TypeChecker::new(&resolve_result, dummy_source.clone());
-    type_checker.type_check_builtin_vars(&builtin_vars);
-    let mut type_check_result = type_checker.into_type_check_result();
-
-    let mut vm = Vm::new(&builtin_vars);
-    let mut codegen = Codegen::new("<global>".to_string(), &resolve_result, &dummy_source);
-    codegen.codegen_builtin_vars(&builtin_vars);
-    vm.interpret(codegen.into_inner_chunk()); // load built in functions into memory
+    let (mut resolve_result, mut type_check_result, mut vm) = builtin_initial_state(&builtin_vars);
 
     loop {
         print!("> ");
@@ -146,19 +135,7 @@ fn repl() {
 fn interpret_file_contents(source: &str) {
     let builtin_vars = default_builtin_vars();
 
-    let dummy_source: Source = "".into();
-    let mut resolver = Resolver::new(dummy_source.clone());
-    resolver.resolve_builtin_vars(&builtin_vars);
-    let mut resolve_result = resolver.into_resolve_result();
-
-    let mut type_checker = TypeChecker::new(&resolve_result, dummy_source.clone());
-    type_checker.type_check_builtin_vars(&builtin_vars);
-    let mut type_check_result = type_checker.into_type_check_result();
-
-    let mut vm = Vm::new(&builtin_vars);
-    let mut codegen = Codegen::new("<global>".to_string(), &resolve_result, &dummy_source);
-    codegen.codegen_builtin_vars(&builtin_vars);
-    vm.interpret(codegen.into_inner_chunk()); // load built in functions into memory
+    let (mut resolve_result, mut type_check_result, mut vm) = builtin_initial_state(&builtin_vars);
 
     let source = source.into();
     let mut parser = Parser::new(&source);
@@ -185,23 +162,23 @@ fn interpret_file_contents(source: &str) {
         match vm.interpret(chunk) {
             InterpretResult::Ok => {}
             InterpretResult::RuntimeError { message, line } => {
-                eprintln!("Runtime Error: {} at line {}", message, line);
+                eprintln!("runtime error: {}\n   --> unknown:{}", message, line);
             }
         }
     }
 }
 
-fn main() {
+fn main() -> Result<()> {
     if std::env::args().len() < 2 {
         repl();
     } else {
         let path = std::env::args().nth(1).unwrap();
-        let contents = std::fs::read_to_string(path);
-        match contents {
-            Ok(contents) => interpret_file_contents(&contents),
-            Err(err) => eprintln!("Error: {}", err),
-        }
+        let contents = std::fs::read_to_string(path.as_str())
+            .context(format!("File {} does not exist.", path))?;
+        interpret_file_contents(&contents)
     }
+
+    Ok(())
 }
 
 #[cfg(test)]

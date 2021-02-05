@@ -2,8 +2,13 @@
 
 use std::rc::Rc;
 
+use ella_passes::resolve::{ResolveResult, Resolver};
+use ella_passes::type_checker::{TypeCheckResult, TypeChecker};
+use ella_source::Source;
 use ella_value::object::{Obj, ObjKind};
 use ella_value::{BuiltinType, BuiltinVars, UniqueType, Value};
+use ella_vm::codegen::Codegen;
+use ella_vm::vm::Vm;
 
 #[allow(dead_code)] // This appears to be a bug with rustc. These functions are used in both main.rs and lib.rs
 
@@ -101,6 +106,27 @@ pub fn default_builtin_vars() -> BuiltinVars {
         .into(),
     );
     builtin_vars
+}
+
+/// Returns a tuple of type ([`ResolveResult`], [`TypeCheckResult`], [`Vm`]).
+pub fn builtin_initial_state<'a>(
+    builtin_vars: &'a BuiltinVars,
+) -> (ResolveResult, TypeCheckResult, Vm<'a>) {
+    let dummy_source: Source = "".into();
+    let mut resolver = Resolver::new(dummy_source.clone());
+    resolver.resolve_builtin_vars(&builtin_vars);
+    let resolve_result = resolver.into_resolve_result();
+
+    let mut type_checker = TypeChecker::new(&resolve_result, dummy_source.clone());
+    type_checker.type_check_builtin_vars(&builtin_vars);
+    let type_check_result = type_checker.into_type_check_result();
+
+    let mut vm = Vm::new(&builtin_vars);
+    let mut codegen = Codegen::new("<global>".to_string(), &resolve_result, &dummy_source);
+    codegen.codegen_builtin_vars(&builtin_vars);
+    vm.interpret(codegen.into_inner_chunk()); // load built in functions into memory
+
+    (resolve_result, type_check_result, vm)
 }
 
 pub fn print(args: &mut [Value]) -> Value {
