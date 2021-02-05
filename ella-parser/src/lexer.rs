@@ -101,6 +101,15 @@ impl Token {
     /// Returns the binary binding power or `None` if invalid binop token.
     /// Binding power `0` and `1` is reserved for accepting any expression.
     /// Assignment ([`Token::Equals`]) has the lowest precedence with `(3, 2)`.
+    /// 
+    /// # Example
+    /// ```
+    /// use ella_parser::lexer::Token;
+    /// 
+    /// assert_eq!(Token::Plus.binop_bp(), Some((8, 9)));
+    /// assert_eq!(Token::Equals.binop_bp(), Some((3, 2)));
+    /// assert_eq!(Token::While.binop_bp(), None); // returns None if invalid operator
+    /// ```
     pub fn binop_bp(&self) -> Option<(u8, u8)> {
         match self {
             /* Additive */
@@ -125,9 +134,17 @@ impl Token {
 
     /// Returns the postfix binding power or `None` if invalid binop token.
     /// Binding power `0` and `1` is reserved for accepting any expression.
+    /// 
+    /// # Example
+    /// ```
+    /// use ella_parser::lexer::Token;
+    /// 
+    /// assert_eq!(Token::OpenParen.postfix_bp(), Some((12, ()))); // function call operator
+    /// assert_eq!(Token::While.postfix_bp(), None); // returns None if invalid operator
+    /// ```
     pub fn postfix_bp(&self) -> Option<(u8, ())> {
         match self {
-            Token::OpenParen => Some((12, ())),
+            Token::OpenParen => Some((12, ())), // function call
             _ => None,
         }
     }
