@@ -246,6 +246,8 @@ mod tests {
         assert_debug_snapshot!("simple-string", expr(r#""abc""#));
         assert_debug_snapshot!("empty-string", expr(r#""""#));
         assert_debug_snapshot!("simple-escape-string", expr(r#""\n\t\\""#));
+        assert_debug_snapshot!("all-valid-escape-sequences-string", expr(r#""\n\r\t\b\f\v\0""#));
+        assert_debug_snapshot!("redundant-escape-sequences-string", expr(r#""a\aa""#)); // should be "aaa"
     }
 
     #[test]
