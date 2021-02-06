@@ -32,7 +32,7 @@ impl Chunk {
         let constant = self.constants[constant_index as usize].clone();
         writeln!(
             f,
-            "{:<10} {:<3} (value = {}) {}",
+            "{:<10} {:<3} (value = {:?}) {}",
             name, constant_index, constant, msg
         )?;
         Ok(offset + 2)

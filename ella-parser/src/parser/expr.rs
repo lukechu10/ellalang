@@ -242,6 +242,19 @@ mod tests {
     }
 
     #[test]
+    fn test_string_literal() {
+        assert_debug_snapshot!("simple-string", expr(r#""abc""#));
+        assert_debug_snapshot!("empty-string", expr(r#""""#));
+        assert_debug_snapshot!("simple-escape-string", expr(r#""\n\t\\""#));
+    }
+
+    #[test]
+    #[should_panic]
+    fn bad_string_literal() {
+        expr(r#""abc\""#);
+    }
+
+    #[test]
     fn test_binary_expr() {
         assert_debug_snapshot!("binary", expr("1 + 1"));
         assert_debug_snapshot!("binary-equality", expr("1 == 2 - 1"));
