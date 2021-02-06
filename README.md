@@ -159,6 +159,6 @@ Ella includes some built-in functions that are defined in Rust:
 * `is_nan(num)` - Returns `true` if the number is `NaN`. Returns `false` otherwise. Note that this is the only way to check if a number is `NaN`.
 * `parse_number(str)` - Parses a string into a floating point number or `NaN` if invalid.
 * `clock()` - Returns a floating point number representing the number of seconds since the Unix epoch. Useful for simple benchmarks.
-* `str(value` - Converts any value into a string.
+* `str(value)` - Converts any value into a string.
 
 This list of features is non exhaustive. More features are currently being implemented. Thanks for checking out this project!
