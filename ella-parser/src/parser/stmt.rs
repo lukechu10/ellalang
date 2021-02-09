@@ -42,7 +42,7 @@ impl<'a> Parser<'a> {
 
                 if self.eat(Token::CloseBrace) {
                     break;
-                } else if self.current_token == Token::Eof {
+                } else if self.eat(Token::Eof) {
                     self.unexpected();
                     break;
                 }
@@ -68,7 +68,7 @@ impl<'a> Parser<'a> {
 
                 if self.eat(Token::CloseBrace) {
                     break;
-                } else if self.current_token == Token::Eof {
+                } else if self.eat(Token::Eof) {
                     self.unexpected();
                     break;
                 }
@@ -83,7 +83,7 @@ impl<'a> Parser<'a> {
 
                     if self.eat(Token::CloseBrace) {
                         break;
-                    } else if self.current_token == Token::Eof {
+                    } else if self.eat(Token::Eof) {
                         self.unexpected();
                         break;
                     }
@@ -113,7 +113,7 @@ impl<'a> Parser<'a> {
 
                 if self.eat(Token::CloseBrace) {
                     break;
-                } else if self.current_token == Token::Eof {
+                } else if self.eat(Token::Eof) {
                     self.unexpected();
                     break;
                 }
@@ -213,6 +213,9 @@ impl<'a> Parser<'a> {
                 body.push(self.parse_declaration());
 
                 if self.eat(Token::CloseBrace) {
+                    break;
+                } else if self.eat(Token::Eof) {
+                    self.unexpected();
                     break;
                 }
             }
