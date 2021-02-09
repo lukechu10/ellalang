@@ -2,6 +2,32 @@
 
 use logos::Logos;
 
+/// Creates a new [`String`] with escaped sequences in raw literal.
+pub fn escape_string_literal(raw: &str) -> String {
+    let mut tmp = String::new();
+    let mut chr_iter = raw.chars().into_iter();
+    while let Some(chr) = chr_iter.next() {
+        tmp.push(match chr {
+            '\\' => match chr_iter
+                .next()
+                .expect("raw string cannot end with '\\' character")
+            {
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                'b' => '\x08',
+                'f' => '\x0C',
+                // vertical tab
+                'v' => '\x0b',
+                '0' => '\0',
+                chr => chr,
+            },
+            chr => chr,
+        });
+    }
+    tmp
+}
+
 /// Represents a source code `Token`.
 #[derive(Debug, Logos, Clone, PartialEq)]
 pub enum Token {
@@ -10,7 +36,7 @@ pub enum Token {
     NumberLit(f64),
     #[regex(r"true|false", |lex| if lex.slice() == "true" { true } else { false } )]
     BoolLit(bool),
-    #[regex(r#""[^"]*""#, |lex| lex.slice()[1..lex.slice().len() - 1].to_string())]
+    #[regex(r#""(\\.|[^"\\])*""#, |lex| escape_string_literal(&lex.slice()[1..lex.slice().len() - 1]))]
     StringLit(String),
 
     // identifiers
@@ -101,11 +127,11 @@ impl Token {
     /// Returns the binary binding power or `None` if invalid binop token.
     /// Binding power `0` and `1` is reserved for accepting any expression.
     /// Assignment ([`Token::Equals`]) has the lowest precedence with `(3, 2)`.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use ella_parser::lexer::Token;
-    /// 
+    ///
     /// assert_eq!(Token::Plus.binop_bp(), Some((8, 9)));
     /// assert_eq!(Token::Equals.binop_bp(), Some((3, 2)));
     /// assert_eq!(Token::While.binop_bp(), None); // returns None if invalid operator
@@ -134,11 +160,11 @@ impl Token {
 
     /// Returns the postfix binding power or `None` if invalid binop token.
     /// Binding power `0` and `1` is reserved for accepting any expression.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use ella_parser::lexer::Token;
-    /// 
+    ///
     /// assert_eq!(Token::OpenParen.postfix_bp(), Some((12, ()))); // function call operator
     /// assert_eq!(Token::While.postfix_bp(), None); // returns None if invalid operator
     /// ```

@@ -77,7 +77,7 @@ impl UniqueType {
     /// use ella_value::{BuiltinType, UniqueType};
     /// // Can always cast to same type (string -> string).
     /// assert!(UniqueType::from(BuiltinType::String).can_implicit_cast_to(&BuiltinType::String.into()));
-    /// 
+    ///
     /// // Any and unknown can accept any type.
     /// assert!(UniqueType::from(BuiltinType::Number).can_implicit_cast_to(&UniqueType::Any));
     /// assert!(UniqueType::from(BuiltinType::Number).can_implicit_cast_to(&UniqueType::Unknown));
@@ -134,6 +134,16 @@ impl Value {
             ObjKind::NativeFn(object::NativeFn { ident, .. }) => write!(f, "<native fn {}>", ident),
         }
     }
+
+    /// Dumps the object with the specified [`fmt::Formatter`]. Prints the string's escaped sequences (e.g. `'\n'`).
+    fn print_dbg_obj(f: &mut fmt::Formatter<'_>, obj: &object::Obj) -> fmt::Result {
+        match &obj.kind {
+            ObjKind::Str(str) => write!(f, "{:?}", str),
+            ObjKind::Fn(Function { ident, .. }) => write!(f, "<fn {}>", ident),
+            ObjKind::Closure(Closure { func, .. }) => write!(f, "<fn closure {}>", func.ident),
+            ObjKind::NativeFn(object::NativeFn { ident, .. }) => write!(f, "<native fn {}>", ident),
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -148,7 +158,11 @@ impl fmt::Display for Value {
 
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, f)
+        match self {
+            Value::Number(val) => write!(f, "{}", val),
+            Value::Bool(val) => write!(f, "{}", val),
+            Value::Object(val) => Self::print_dbg_obj(f, val),
+        }
     }
 }
 

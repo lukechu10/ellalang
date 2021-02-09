@@ -1,0 +1,10 @@
+---
+source: ella-parser/src/parser/expr.rs
+expression: "expr(r#\"\"\\n\\t\\\\\"\"#)"
+---
+Expr {
+    kind: StringLit(
+        "\n\t\\",
+    ),
+    span: 0..8,
+}

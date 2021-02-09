@@ -1,0 +1,10 @@
+---
+source: ella-parser/src/parser/expr.rs
+expression: "expr(r#\"\"a\\aa\"\"#)"
+---
+Expr {
+    kind: StringLit(
+        "aaa",
+    ),
+    span: 0..6,
+}
