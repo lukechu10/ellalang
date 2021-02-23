@@ -257,26 +257,31 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                     .expr_type_table
                     .get(&(arg.as_ref() as *const Expr))
                     .unwrap();
-                match op {
-                    Token::LogicalNot => {
-                        if arg_ty != &UniqueType::Builtin(BuiltinType::Bool) {
-                            self.source.errors.add_error(SyntaxError::new(
-                                "logical not can only be used on a bool",
-                                expr.span.clone(),
-                            ));
+
+                if arg_ty == &UniqueType::Any {
+                    UniqueType::Any // propagate any
+                } else {
+                    match op {
+                        Token::LogicalNot => {
+                            if arg_ty != &UniqueType::Builtin(BuiltinType::Bool) {
+                                self.source.errors.add_error(SyntaxError::new(
+                                    "logical not can only be used on a bool",
+                                    expr.span.clone(),
+                                ));
+                            }
+                            UniqueType::Builtin(BuiltinType::Bool)
                         }
-                        UniqueType::Builtin(BuiltinType::Bool)
-                    }
-                    Token::Minus => {
-                        if arg_ty != &UniqueType::Builtin(BuiltinType::Number) {
-                            self.source.errors.add_error(SyntaxError::new(
-                                "unary minus can only be used on a number",
-                                expr.span.clone(),
-                            ));
+                        Token::Minus => {
+                            if arg_ty != &UniqueType::Builtin(BuiltinType::Number) {
+                                self.source.errors.add_error(SyntaxError::new(
+                                    "unary minus can only be used on a number",
+                                    expr.span.clone(),
+                                ));
+                            }
+                            UniqueType::Builtin(BuiltinType::Number)
                         }
-                        UniqueType::Builtin(BuiltinType::Number)
+                        _ => unreachable!(),
                     }
-                    _ => unreachable!(),
                 }
             }
             ExprKind::Lambda {
