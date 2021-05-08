@@ -109,7 +109,12 @@ fn repl() {
 
         eprintln!("{}", source);
         if source.has_no_errors() {
-            let mut codegen = Codegen::new("<global>".to_string(), &resolve_result_tmp, &type_check_result, &source);
+            let mut codegen = Codegen::new(
+                "<global>".to_string(),
+                &resolve_result_tmp,
+                &type_check_result,
+                &source,
+            );
 
             codegen.codegen_function(&ast);
 
@@ -153,7 +158,12 @@ fn interpret_file_contents(source: &str) {
     if !source.has_no_errors() {
         eprintln!("{}", source);
     } else {
-        let mut codegen = Codegen::new("<global>".to_string(), &resolve_result, &type_check_result, &source);
+        let mut codegen = Codegen::new(
+            "<global>".to_string(),
+            &resolve_result,
+            &type_check_result,
+            &source,
+        );
 
         codegen.codegen_function(&ast);
 
@@ -172,8 +182,8 @@ fn main() -> Result<()> {
         repl();
     } else {
         let path = std::env::args().nth(1).unwrap();
-        let contents = std::fs::read_to_string(path.as_str())
-            .context(format!("Failed to read '{}'", path))?;
+        let contents =
+            std::fs::read_to_string(path.as_str()).context(format!("Failed to read '{}'", path))?;
         interpret_file_contents(&contents)
     }
 

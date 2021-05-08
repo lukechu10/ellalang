@@ -108,9 +108,7 @@ pub fn default_builtin_vars() -> BuiltinVars {
 }
 
 /// Returns a tuple of type ([`ResolveResult`], [`TypeCheckResult`], [`Vm`]).
-pub fn builtin_initial_state<'a>(
-    builtin_vars: &'a BuiltinVars,
-) -> (ResolveResult, TypeCheckResult, Vm<'a>) {
+pub fn builtin_initial_state(builtin_vars: &BuiltinVars) -> (ResolveResult, TypeCheckResult, Vm) {
     let dummy_source: Source = "".into();
     let mut resolver = Resolver::new(dummy_source.clone());
     resolver.resolve_builtin_vars(&builtin_vars);
@@ -157,9 +155,8 @@ pub fn readln(_args: &mut [Value]) -> Value {
 pub fn assert(args: &mut [Value]) -> Value {
     let arg = &args[0];
 
-    match arg {
-        Value::Bool(val) => assert!(*val),
-        _ => {}
+    if let Value::Bool(val) = arg {
+        assert!(*val)
     }
     Value::Bool(true)
 }

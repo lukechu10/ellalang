@@ -55,7 +55,7 @@ impl<'a> TypeChecker<'a> {
         Self {
             resolve_result,
             symbol_type_table: type_check_result.symbol_type_table.clone(),
-            expr_type_table: type_check_result.expr_type_table.clone(),
+            expr_type_table: type_check_result.expr_type_table,
             source,
         }
     }
@@ -105,10 +105,9 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                 Some(resolved_symbol) => self
                     .symbol_type_table
                     .get(&(resolved_symbol.symbol.as_ptr() as *const Symbol))
-                    .expect(&format!(
-                        "type of identifier \"{}\" at {:?}",
-                        ident, expr.span
-                    ))
+                    .unwrap_or_else(|| {
+                        panic!("type of identifier \"{}\" at {:?}", ident, expr.span)
+                    })
                     .clone(),
                 None => UniqueType::Unknown,
             },
@@ -289,12 +288,11 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
                 params,
                 body: _,
             } => {
-                let ty = UniqueType::Builtin(BuiltinType::Fn {
+                // FIXME give function proper type
+                UniqueType::Builtin(BuiltinType::Fn {
                     params: vec![UniqueType::Any; params.len()],
                     ret: Box::new(UniqueType::Any),
-                });
-                // FIXME give function proper type
-                ty
+                })
             }
             ExprKind::Error => UniqueType::Unknown,
         };
@@ -302,7 +300,7 @@ impl<'a> Visitor<'a> for TypeChecker<'a> {
     }
 
     fn visit_stmt(&mut self, stmt: &'a Stmt) {
-        if !matches!(&stmt.kind, StmtKind::FnDeclaration{..}) {
+        if !matches!(&stmt.kind, StmtKind::FnDeclaration { .. }) {
             // function declaration must be type checked first before body to allow for recursion
             walk_stmt(self, stmt);
         }

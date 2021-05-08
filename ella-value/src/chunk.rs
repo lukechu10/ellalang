@@ -181,7 +181,7 @@ impl Chunk {
         self.code.push(opcode.to_byte_code());
         self.lines.push(line);
         debug_assert_eq!(self.code.len(), self.lines.len());
-        return self.code.len() - 1; // -1 to include the effect of adding the byte to self.code
+        self.code.len() - 1 // -1 to include the effect of adding the byte to self.code
     }
 
     /// Patches a `jmp` or `jmp_if_false` instruction to jump to current position.

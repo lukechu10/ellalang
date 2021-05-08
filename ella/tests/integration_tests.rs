@@ -568,43 +568,55 @@ assert(1); // error, assert takes a bool"#,
     #[test]
     #[should_panic]
     fn cmp() {
-        interpret(r#"
-"1" == 1; // error"#);
+        interpret(
+            r#"
+"1" == 1; // error"#,
+        );
     }
 
     #[test]
     #[should_panic]
     fn logical_not() {
-        interpret(r#"
-!1; // error, should be bool"#);
+        interpret(
+            r#"
+!1; // error, should be bool"#,
+        );
     }
 
     #[test]
     #[should_panic]
     fn unary_minus() {
-        interpret(r#"
--true; // error, should be number"#);
+        interpret(
+            r#"
+-true; // error, should be number"#,
+        );
     }
 
     #[test]
     #[should_panic]
     fn unknown_type() {
-        interpret(r#"
-let x: Foo = 1; // error, Foo unknown"#);
+        interpret(
+            r#"
+let x: Foo = 1; // error, Foo unknown"#,
+        );
     }
 
     #[test]
     #[should_panic]
     fn wrong_type_for_initializer() {
-        interpret(r#"
-let x: bool = 1; // error, expected bool"#);
+        interpret(
+            r#"
+let x: bool = 1; // error, expected bool"#,
+        );
     }
 
     #[test]
     #[should_panic]
     fn wrong_type_for_initializer2() {
-        interpret(r#"
+        interpret(
+            r#"
 let x = 1; // infer to be number
-let y: bool = x; // error, expected bool"#);
+let y: bool = x; // error, expected bool"#,
+        );
     }
 }

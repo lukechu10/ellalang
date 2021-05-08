@@ -17,7 +17,7 @@ use ella_value::BuiltinVars;
 pub struct ResolveResult {
     symbol_table: SymbolTable,
     resolved_symbol_table: ResolvedSymbolTable,
-    accessible_symbols: Vec<Rc<RefCell<Symbol>>>
+    accessible_symbols: Vec<Rc<RefCell<Symbol>>>,
 }
 
 impl ResolveResult {
@@ -178,7 +178,7 @@ impl<'a> Resolver<'a> {
                 return i + 1;
             }
         }
-        return 0;
+        0
     }
 
     /// Returns `true` if both scope depths are in the same function (e.g. using block statements). Returns `false` otherwise.
@@ -360,9 +360,7 @@ impl<'a> Visitor<'a> for Resolver<'a> {
                 self.visit_expr(initializer);
                 self.add_symbol(ident.clone(), Some(stmt));
             }
-            StmtKind::FnParam {
-                ident
-            } => {
+            StmtKind::FnParam { ident } => {
                 self.add_symbol(ident.clone(), Some(stmt));
             }
             StmtKind::FnDeclaration {

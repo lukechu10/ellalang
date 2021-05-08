@@ -271,9 +271,8 @@ impl<'a> Vm<'a> {
 
                     let a_num = a.cast_to_number();
                     let b_num = b.cast_to_number();
-                    if a_num.is_some() && b_num.is_some() {
-                        self.stack
-                            .push(Value::Number(a_num.unwrap() + b_num.unwrap()));
+                    if let (Some(a_num), Some(b_num)) = (a_num, b_num) {
+                        self.stack.push(Value::Number(a_num + b_num));
                     } else {
                         let a_str = a.cast_to_str();
                         let b_str = b.cast_to_str();

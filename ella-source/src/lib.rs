@@ -79,9 +79,9 @@ fn get_newline_pos(src: &str) -> Vec<usize> {
     pos
 }
 
-impl<'a> Into<Source<'a>> for &'a str {
-    fn into(self) -> Source<'a> {
-        Source::new(self)
+impl<'a> From<&'a str> for Source<'a> {
+    fn from(val: &'a str) -> Self {
+        Source::new(val)
     }
 }
 

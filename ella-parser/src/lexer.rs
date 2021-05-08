@@ -5,7 +5,7 @@ use logos::Logos;
 /// Creates a new [`String`] with escaped sequences in raw literal.
 pub fn escape_string_literal(raw: &str) -> String {
     let mut tmp = String::new();
-    let mut chr_iter = raw.chars().into_iter();
+    let mut chr_iter = raw.chars();
     while let Some(chr) = chr_iter.next() {
         tmp.push(match chr {
             '\\' => match chr_iter
@@ -34,7 +34,7 @@ pub enum Token {
     // literals
     #[regex(r"[0-9.]+", |lex| lex.slice().parse())]
     NumberLit(f64),
-    #[regex(r"true|false", |lex| if lex.slice() == "true" { true } else { false } )]
+    #[regex(r"true|false", |lex| lex.slice() == "true" )]
     BoolLit(bool),
     #[regex(r#""(\\.|[^"\\])*""#, |lex| escape_string_literal(&lex.slice()[1..lex.slice().len() - 1]))]
     StringLit(String),
@@ -177,15 +177,15 @@ impl Token {
 
     /// Returns `true` if the token is synchronization point for error recovery.
     pub fn is_sync_point(&self) -> bool {
-        match self {
+        matches!(
+            self,
             Token::Semi
-            | Token::OpenBrace
-            | Token::CloseBrace
-            | Token::OpenParen
-            | Token::CloseParen
-            | Token::Error
-            | Token::Eof => true,
-            _ => false,
-        }
+                | Token::OpenBrace
+                | Token::CloseBrace
+                | Token::OpenParen
+                | Token::CloseParen
+                | Token::Error
+                | Token::Eof
+        )
     }
 }

@@ -77,7 +77,7 @@ pub fn walk_stmt<'ast>(visitor: &mut impl Visitor<'ast>, stmt: &'ast Stmt) {
         } => {
             visit_stmt_list!(visitor, params);
             visit_stmt_list!(visitor, body);
-        },
+        }
         StmtKind::Block(body) => visit_stmt_list!(visitor, body),
         StmtKind::IfElseStmt {
             condition,

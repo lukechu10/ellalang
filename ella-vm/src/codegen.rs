@@ -100,7 +100,7 @@ impl<'a> Codegen<'a> {
                 false => {
                     self.chunk.write_chunk(OpCode::Pop, line);
                     self.chunk
-                        .add_debug_annotation_at_last(format!("cleanup local variable"));
+                        .add_debug_annotation_at_last("cleanup local variable".to_string());
                 }
             };
         }
@@ -132,6 +132,8 @@ impl<'a> Visitor<'a> for Codegen<'a> {
         let line = self.source.lookup_line(expr.span.start);
 
         match &expr.kind {
+            #[allow(clippy::float_cmp)]
+            // 1.0 literal in source code will always be stored exactly as `1.0`.
             ExprKind::NumberLit(val) => {
                 if *val == 0.0 {
                     self.chunk.write_chunk(OpCode::Ld0, line);
@@ -479,7 +481,10 @@ impl<'a> Visitor<'a> for Codegen<'a> {
                 self.visit_expr(expr);
                 self.chunk.write_chunk(OpCode::Pop, line);
             }
+
             StmtKind::ReturnStmt(expr) => {
+                #[allow(clippy::float_cmp)]
+                // 1.0 literal in source code will always be stored exactly as `1.0`.
                 if let Expr {
                     kind: ExprKind::NumberLit(number),
                     ..
