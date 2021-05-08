@@ -2,8 +2,8 @@
 
 use crate::ast::{Expr, ExprKind, Stmt, StmtKind};
 use crate::lexer::Token;
-use owl_source::{Source, SyntaxError};
 use logos::{Lexer, Logos};
+use owl_source::{Source, SyntaxError};
 use std::mem;
 use std::ops::Range;
 

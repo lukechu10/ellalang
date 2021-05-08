@@ -1,7 +1,7 @@
+use num_traits::FromPrimitive;
 use owl_value::chunk::{Chunk, OpCode};
 use owl_value::object::{Closure, Function, NativeFn, Obj, ObjKind, UpValue};
 use owl_value::{BuiltinVars, Value, ValueArray};
-use num_traits::FromPrimitive;
 
 use std::cell::RefCell;
 use std::rc::Rc;
