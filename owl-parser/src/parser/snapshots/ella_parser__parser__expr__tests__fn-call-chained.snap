@@ -1,0 +1,55 @@
+---
+source: owl-parser/src/parser/expr.rs
+expression: "expr(\"foo(1, 2)(3)(4)\")"
+---
+Expr {
+    kind: FnCall {
+        callee: Expr {
+            kind: FnCall {
+                callee: Expr {
+                    kind: FnCall {
+                        callee: Expr {
+                            kind: Identifier(
+                                "foo",
+                            ),
+                            span: 0..3,
+                        },
+                        args: [
+                            Expr {
+                                kind: NumberLit(
+                                    1.0,
+                                ),
+                                span: 4..5,
+                            },
+                            Expr {
+                                kind: NumberLit(
+                                    2.0,
+                                ),
+                                span: 7..8,
+                            },
+                        ],
+                    },
+                    span: 0..9,
+                },
+                args: [
+                    Expr {
+                        kind: NumberLit(
+                            3.0,
+                        ),
+                        span: 10..11,
+                    },
+                ],
+            },
+            span: 0..12,
+        },
+        args: [
+            Expr {
+                kind: NumberLit(
+                    4.0,
+                ),
+                span: 13..14,
+            },
+        ],
+    },
+    span: 0..15,
+}

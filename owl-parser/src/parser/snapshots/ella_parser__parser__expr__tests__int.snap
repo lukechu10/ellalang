@@ -1,0 +1,10 @@
+---
+source: owl-parser/src/parser/expr.rs
+expression: "expr(\"1\")"
+---
+Expr {
+    kind: NumberLit(
+        1.0,
+    ),
+    span: 0..1,
+}

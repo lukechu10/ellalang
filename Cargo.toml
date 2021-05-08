@@ -1,11 +1,11 @@
 [workspace]
 members = [
-  "ella",
-  "ella-parser",
-  "ella-passes",
-  "ella-source",
-  "ella-value",
-  "ella-vm",
+  "owl",
+  "owl-parser",
+  "owl-passes",
+  "owl-source",
+  "owl-value",
+  "owl-vm",
 ]
 
 [profile.release]

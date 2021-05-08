@@ -1,8 +1,8 @@
-# Ella lang
+# Owl lang
 
-Welcome to Ella lang! Ella lang is a computer programming language implemented in Rust.
+Welcome to Owl lang! Owl lang is a computer programming language implemented in Rust.
 
-Checkout the interactive online playground [here](https://lukechu10.github.io/ellalang-playground/).
+Checkout the interactive online playground [here](https://lukechu10.github.io/owllang-playground/).
 
 ## Language features
 
@@ -18,10 +18,10 @@ Yep! That's it. Don't forget to add the semicolon (`;`) character at the end.
 
 One can also store values inside variables:
 ```
-let name = "Ella";
+let name = "Owl";
 println("Hello " + name + "!");
 ```
-This should print `Hello Ella!` to the console.
+This should print `Hello Owl!` to the console.
 
 Of course, other types exist as well.
 ```
@@ -43,7 +43,7 @@ let y = x / 5; // should evaluate to 2
 
 ### Functions
 
-Like almost every other programming language, Ella supports defining and calling functions (aka methods in some languages):
+Like almost every other programming language, Owl supports defining and calling functions (aka methods in some languages):
 ```
 fn greet() {
     println("Hello World!");
@@ -67,7 +67,7 @@ Results are returned using a `return` statement.
 
 ### Expressions
 
-As seen earlier, Ella includes expressions.
+As seen earlier, Owl includes expressions.
 
 Expressions can include arithmetic operators with the appropriate precedence...
 ```
@@ -91,7 +91,7 @@ my_function // reference to a function (not a function call)
 
 ### Higher order functions and closures
 
-In Ella, functions are also variables. This means we can pass functions to other functions as arguments. Example:
+In Owl, functions are also variables. This means we can pass functions to other functions as arguments. Example:
 ```
 // This function applies the function f on g
 fn apply(f, x) {
@@ -127,7 +127,7 @@ Lambda allows inline function creation and thus improves ergonomics.
 
 ### Control flow
 
-Ella supports structured control flow via `if`/`else` and `while` (`for` is still being implemented).
+Owl supports structured control flow via `if`/`else` and `while` (`for` is still being implemented).
 
 Branching is achieved via `if` and `else`. The `else` block is optional.
 ```
@@ -149,7 +149,7 @@ If `condition` is false since the very beginning, the loop will never execute.
 
 ### Built-in functions
 
-Ella includes some built-in functions that are defined in Rust:
+Owl includes some built-in functions that are defined in Rust:
 
 * `print(x)` - Prints a value `x` to the console. *Not available in playground*.
 * `println(x)` - Prints a value `x` to the console followed by a new line (`\n` character).

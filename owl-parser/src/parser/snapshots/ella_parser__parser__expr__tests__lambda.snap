@@ -1,0 +1,15 @@
+---
+source: owl-parser/src/parser/expr.rs
+expression: "expr(\"fn () {}\")"
+---
+Expr {
+    kind: Lambda {
+        inner_stmt: Stmt {
+            kind: Lambda,
+            span: 0..8,
+        },
+        params: [],
+        body: [],
+    },
+    span: 0..8,
+}

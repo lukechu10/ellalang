@@ -1,0 +1,10 @@
+---
+source: owl-parser/src/parser/expr.rs
+expression: "expr(\"foo\")"
+---
+Expr {
+    kind: Identifier(
+        "foo",
+    ),
+    span: 0..3,
+}

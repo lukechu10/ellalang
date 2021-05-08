@@ -1,0 +1,31 @@
+---
+source: owl-parser/src/parser/stmt.rs
+expression: "stmt(\"fn foo(a, b, c) {}\")"
+---
+Stmt {
+    kind: FnDeclaration {
+        ident: "foo",
+        params: [
+            Stmt {
+                kind: FnParam {
+                    ident: "a",
+                },
+                span: 7..8,
+            },
+            Stmt {
+                kind: FnParam {
+                    ident: "b",
+                },
+                span: 10..11,
+            },
+            Stmt {
+                kind: FnParam {
+                    ident: "c",
+                },
+                span: 13..14,
+            },
+        ],
+        body: [],
+    },
+    span: 0..18,
+}

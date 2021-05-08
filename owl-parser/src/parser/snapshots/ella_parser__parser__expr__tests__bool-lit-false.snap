@@ -1,0 +1,10 @@
+---
+source: owl-parser/src/parser/expr.rs
+expression: "expr(\"false\")"
+---
+Expr {
+    kind: BoolLit(
+        false,
+    ),
+    span: 0..5,
+}
