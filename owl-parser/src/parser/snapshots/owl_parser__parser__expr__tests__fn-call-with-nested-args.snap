@@ -1,0 +1,42 @@
+---
+source: owl-parser/src/parser/expr.rs
+expression: "expr(\"foo(1, bar, baz())\")"
+
+---
+Expr {
+    kind: FnCall {
+        callee: Expr {
+            kind: Identifier(
+                "foo",
+            ),
+            span: 0..3,
+        },
+        args: [
+            Expr {
+                kind: NumberLit(
+                    1.0,
+                ),
+                span: 4..5,
+            },
+            Expr {
+                kind: Identifier(
+                    "bar",
+                ),
+                span: 7..10,
+            },
+            Expr {
+                kind: FnCall {
+                    callee: Expr {
+                        kind: Identifier(
+                            "baz",
+                        ),
+                        span: 12..15,
+                    },
+                    args: [],
+                },
+                span: 12..17,
+            },
+        ],
+    },
+    span: 0..18,
+}

@@ -1,0 +1,23 @@
+---
+source: owl-parser/src/parser/expr.rs
+expression: "expr(\"1 + 1\")"
+
+---
+Expr {
+    kind: Binary {
+        lhs: Expr {
+            kind: NumberLit(
+                1.0,
+            ),
+            span: 0..1,
+        },
+        op: Plus,
+        rhs: Expr {
+            kind: NumberLit(
+                1.0,
+            ),
+            span: 4..5,
+        },
+    },
+    span: 0..5,
+}

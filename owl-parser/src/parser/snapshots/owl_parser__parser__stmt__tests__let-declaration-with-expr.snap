@@ -1,0 +1,30 @@
+---
+source: owl-parser/src/parser/stmt.rs
+expression: "stmt(\"let x = 1 + 2;\")"
+
+---
+Stmt {
+    kind: LetDeclaration {
+        ident: "x",
+        initializer: Expr {
+            kind: Binary {
+                lhs: Expr {
+                    kind: NumberLit(
+                        1.0,
+                    ),
+                    span: 8..9,
+                },
+                op: Plus,
+                rhs: Expr {
+                    kind: NumberLit(
+                        2.0,
+                    ),
+                    span: 12..13,
+                },
+            },
+            span: 8..13,
+        },
+        ty: None,
+    },
+    span: 0..14,
+}

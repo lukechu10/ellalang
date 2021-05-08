@@ -1,0 +1,11 @@
+---
+source: owl-parser/src/parser/expr.rs
+expression: "expr(r#\"\"\\n\\r\\t\\b\\f\\v\\0\"\"#)"
+
+---
+Expr {
+    kind: StringLit(
+        "\n\r\t\u{8}\u{c}\u{b}\u{0}",
+    ),
+    span: 0..16,
+}
