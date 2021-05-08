@@ -14,94 +14,94 @@ pub enum OpCode {
     Ldc = 0,
     /// Load a f64 onto the stack.
     /// *9 bytes (1 f64 le operand)*
-    Ldf64 = 26,
+    Ldf64 = 1,
     /// Load the constant 0 onto the stack.
     /// *1 byte*
-    Ld0 = 27,
+    Ld0 = 2,
     /// Load the constant 1 onto the stack.
     /// *1 byte*
-    Ld1 = 28,
+    Ld1 = 3,
     /// Load a local variable onto the stack.
     /// *2 bytes (1 operand)*
-    LdLoc = 15,
+    LdLoc = 4,
     /// Stores the top value on the stack into a local variable.
     /// *2 bytes (1 operand)*
-    StLoc = 16,
+    StLoc = 5,
     /// Loads a global variable onto the stack.
     /// The operand is the absolute position of the variable on the stack.
     /// *2 bytes (1 operand)*
-    LdGlobal = 24,
+    LdGlobal = 6,
     /// Sets a global variable onto the stack.
     /// The operand is the absolute position of the variable on the stack.
     /// *2 bytes (1 operand)*
-    StGlobal = 25,
+    StGlobal = 7,
     /// Loads an upvalue onto the stack.
     /// *2 bytes (1 operand)*
-    LdUpVal = 17,
+    LdUpVal = 8,
     /// Stores the top value on the stack into an upvalue.
     /// *2 bytes (1 operand)*
-    StUpVal = 18,
+    StUpVal = 9,
     /// Closes an upvalue.
     /// *1 byte*
-    CloseUpVal = 20,
+    CloseUpVal = 10,
     /// Negate the last value on the stack.
     /// *1 byte*
-    Neg = 1,
+    Neg = 11,
     /// Logical not on a boolean value.
     /// *1 byte*
-    Not = 2,
-    Add = 3,
-    Sub = 4,
-    Mul = 5,
-    Div = 6,
+    Not = 12,
+    Add = 13,
+    Sub = 14,
+    Mul = 15,
+    Div = 16,
     /// Unchecked version of `add`.
-    AddF64 = 100,
+    AddF64 = 17,
     /// Unchecked version of `sub`.
-    SubF64 = 101,
+    SubF64 = 18,
     /// Unchecked version of `mul`.
-    MulF64 = 102,
+    MulF64 = 19,
     /// Unchecked version of `div`.
-    DivF64 = 103,
+    DivF64 = 20,
     /// Returns the last value on the stack.
     /// *1 byte*
-    Ret = 7,
+    Ret = 21,
     /// Return the constant 0.
     /// *1 byte*
-    Ret0 = 29,
+    Ret0 = 22,
     /// Return the constant 1.
     /// *1 byte*
-    Ret1 = 30,
+    Ret1 = 23,
     /// Loads `true` onto the stack.
     /// *1 byte*
-    LdTrue = 8,
+    LdTrue = 24,
     /// Loads `false` onto the stack.
     /// *1 byte*
-    LdFalse = 9,
-    Eq = 10,
-    Greater = 11,
-    Less = 12,
+    LdFalse = 25,
+    Eq = 26,
+    Greater = 27,
+    Less = 28,
     /// Pops and disposes the last value on the stack.
     /// *1 byte*
-    Pop = 13,
+    Pop = 29,
     /// Calls the function on the top of the stack.
     /// To load the function, use `ldc` to load a function object.
     /// Arity is the operand.
     /// *2 bytes (1 operand)*
-    Calli = 14,
+    Calli = 30,
     /// Creates a closure with a constant function and pushes it onto the stack.
     /// *Variable number of operands*
-    Closure = 19,
+    Closure = 31,
     /// Jump with the specified offset.
     /// **NOTE**: `jmp` cannot jump backwards. To jump backwards, use [`OpCode::Loop`].
     /// *2 bytes (1 u16 operand)*
-    Jmp = 21,
+    Jmp = 32,
     /// Jump with the specified offset if the last value on the stack is `true`.
     /// **NOTE**: This instruction does not pop the stack.
     /// *2 bytes (1 u16 operand)*
-    JmpIfFalse = 22,
+    JmpIfFalse = 33,
     /// Jump backwards with the specified offset.
     /// *2 bytes (1 u16 operand)*
-    Loop = 23,
+    Loop = 34,
 }
 
 /// Represents a chunk of bytecode.
